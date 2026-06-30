@@ -1,76 +1,197 @@
-<div align="center">
-  <img src="https://via.placeholder.com/150/ea580c/ffffff?text=FocusFlow" alt="FocusFlow Logo" width="120" />
+# FocusFlow Studio
 
-  # FocusFlow Studio 🪷
-  **The World's First Vedic-Logic Pomodoro Workstation.**
+**Vedic Pomodoro Workstation — open-source, local-first, zero telemetry.**
 
-  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-  [![Docker Status](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
-  [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi)](https://fastapi.tiangolo.com)
-  [![React](https://img.shields.io/badge/React-black?style=flat&logo=react)](https://react.dev/)
-  
-  <br />
-  <a href="https://railway.app/new"><img src="https://railway.app/button.svg" alt="Deploy on Railway"></a>
-  <a href="https://vercel.com/new"><img src="https://vercel.com/button" alt="Deploy with Vercel"></a>
-</div>
+FocusFlow is a full-stack productivity app that combines Pomodoro and Flowmodoro timers with Pranayama breathing exercises, kanban tasks, journaling, audio tracks, voice notes, and a whiteboard — all wrapped in 5 handcrafted themes.
+
+Built with Next.js, FastAPI, and PostgreSQL, it runs entirely on your machine via Docker.
 
 ---
 
-## 🚀 The Science of Dharana
+## Features
 
-Tired of highly-stimulating productivity apps padding your stress levels? **FocusFlow** combines the brutal efficiency of western Pomodoro/Flowmodoro cycles with the deeply grounding, ancient Indian practice of **Dharana** (Single-Pointed Concentration).
-
-By pairing aggressive `beforeunload` browser-traps with 4-4-4 Pranayama breathing loops during your off-intervals, FocusFlow structurally forces you into a flow state characterized by low-anxiety baseline cortisol limits and sustained cognitive expansion. Zero telemetry, completely local.
-
-### Core Ideology vs Paid Competitors
-
-| Metric | FocusFlow (Vedic Architecture) | Endel ($15/mo) | Tide ($12/mo) |
-|---------|-----------------|----------------|---------------|
-| **Mental Recovery** | ✅ 4-4-4 Pranayama Visualizer | ❌ None | ❌ Abstract |
-| **Focus Pedagogy** | ✅ Dharana + Trataka Tips | ❌ None | ❌ Generic |
-| **Strict Traps** | ✅ PostreSQL session penalties | ❌ No | ❌ No |
-| **Theme Depth** | ✅ 5x CSS Variable Themes | ✅ Yes | ❌ Fixed |
-| **Music Sourcing** | ✅ Included "Ancient Echoes" Drone | ✅ Yes | ❌ None |
-
----
-
-## 🪷 The "Sattva" Theme Engine (v6.0)
-
-Along with Deep Space, Forest Zen, Cyberpunk, and Vintage, FocusFlow is globally governed by the **Sattva (Pure)** Theme.
-
-- **Vedic Chromatics**: A lush, warm layout built entirely on *Sand* and *Saffron* root variables rendering over an absolute minimum white interface.
-- **Tejas Micro-Interactions**: When the Dharana (Focus) timer is active, a massive "Tejas" (Divine Radiance) box-shadow glows dynamically from the timer component rendering real-time drop-shadow calculations.
-- **The Wisdom Engine**: A dedicated layout dashboard rotating high-value structural focus tips extracted directly from the *Bhagavad Gita*, *Yoga Sutras*, and *Ayurvedic* textbooks.
+- **Pomodoro & Flowmodoro** — classic 25/5 or count-up flow mode with proportional breaks
+- **Pranayama Ring** — 4-4-4 breathing guide during breaks
+- **Strict Mode** — `beforeunload` trap that logs failed sessions if you close the tab
+- **5 Themes** — Deep Space, Forest Zen, Cyberpunk, Vintage, Sattva
+- **Kanban Tasks** — add, complete, and track your tasks
+- **Session Analytics** — heatmap with focus scoring
+- **Journal** — timestamped entries for daily reflection
+- **Audio Player** — lo-fi, rain, forest ambiance (bring your own mp3)
+- **Voice Notes (Vani)** — record and store voice memos
+- **Whiteboard (Mandala)** — freeform drawing canvas
+- **Wisdom Panel** — rotating tips from Bhagavad Gita, Yoga Sutras & Ayurveda
+- **Fully local** — no accounts, no cloud, no telemetry
 
 ---
 
-## 🧠 Advanced Capabilities
+## Tech Stack
 
-- **Pranayama Breath-Sync**: During breaks, pulling out your phone ruins your dopamine baseline. The central timer is entirely replaced by a glowing Pranayama breathing-guide synchronized strictly to a 12-second core loop: *Inhale for 4s - Hold for 4s - Exhale for 4s*. 
-- **Flowmodoro Engine**: Sick of being interrupted at 25 minutes while in the zone? Toggle "Flowmodoro". The timer counts *up* infinitely. When you manually hit halt, the system gracefully calculates proportional break intervals via a strict `Elapsed/5` algorithm.
-- **The Cross-Fade Engine**: Driven by raw `AudioContext` and `GainNode`, the app seamlessly transitions between your intense Focus loops and relaxed Break loops over mathematically precise 5-second `linearRampToValueAtTime` curves.
-
----
-
-## 🛠 Tech Stack Deep Dive
-
-FocusFlow uses a distinctly separated high-availability microservice design:
-
-1. **Frontend (Next.js 14 / Tailwind / Framer Motion)**: A stateless UX layer. Heavy lifting is passed arbitrarily to Framer Motion for pristine 60fps React hardware scaling on the breathing components.
-2. **Backend (Python 3.12 / FastAPI / Psycopg2)**: A zero-bloat asynchronous REST layer executing fast sub-millisecond route resolution against our history heat-maps.
-3. **Database (PostgreSQL 15)**: Relational tables utilizing clustered indexing mapped to high-volume user event chronologies (Tasks, Journals, Session telemetry arrays).
+| Layer | Stack |
+|-------|-------|
+| Frontend | Next.js 16, React 19, Tailwind CSS 4, Framer Motion |
+| Backend | Python 3.12, FastAPI, Psycopg2 |
+| Database | PostgreSQL 15 |
+| Container | Docker + Docker Compose |
 
 ---
 
-## ⚙️ One-Command Local Deployment
+## Quick Start
 
-Requirements: `docker` and `docker-compose`.
+### Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) (Docker Desktop on Mac/Windows, or Docker Engine + Compose plugin on Linux)
+- Git
+
+Installation takes about 5–10 minutes depending on your internet speed.
+
+### Step-by-step
 
 ```bash
-git clone https://github.com/yourusername/focusflow.git
+# 1. Clone the repository
+git clone https://github.com/PaddyCH96/focusflow.git
 cd focusflow
+
+# 2. Make the setup script executable and run it
 chmod +x setup.sh
 ./setup.sh
+
+# 3. Build and start all services
 docker compose up --build -d
+
+# 4. Open the app
+open http://localhost:3001
 ```
-Access the immersive UI interface at `http://localhost:3001`.
+
+That's it. The backend API runs on `http://localhost:8000` and PostgreSQL on port `5432`.
+
+### What setup.sh does
+
+The setup script creates the `assets/audio` and `assets/voice_notes` directories if they don't exist — these are required by the backend at startup. On first run, the backend also auto-creates all database tables and seeds 3 default audio tracks.
+
+### Stopping the app
+
+```bash
+docker compose down
+```
+
+To also delete the database data (fresh start):
+```bash
+docker compose down -v
+```
+
+---
+
+## Running Tests
+
+### Frontend (Vitest)
+
+```bash
+cd frontend
+npm install
+npx vitest run
+```
+
+### Backend (pytest)
+
+```bash
+cd backend
+pip install -r requirements.txt
+python -m pytest
+```
+
+State-related endpoints (`/state`) are tested directly. Database-dependent endpoints (`/tasks`, `/sessions`, etc.) are tested with mocked PostgreSQL connections so tests run without Docker.
+
+---
+
+## Project Structure
+
+```
+focusflow/
+├── backend/
+│   ├── app/
+│   │   ├── main.py          # FastAPI app entry point
+│   │   ├── database.py      # PostgreSQL connection & schema init
+│   │   ├── models.py        # Pydantic request/response models
+│   │   └── router.py        # All API routes
+│   ├── tests/
+│   │   └── test_main.py     # Backend tests
+│   ├── Dockerfile
+│   └── requirements.txt
+├── frontend/
+│   ├── src/
+│   │   ├── app/             # Next.js pages
+│   │   └── components/      # React components
+│   ├── tests/               # Vitest test files
+│   ├── Dockerfile
+│   └── package.json
+├── assets/
+│   ├── audio/               # MP3 files served by the backend
+│   └── voice_notes/         # User recordings saved here
+├── docker-compose.yml
+└── setup.sh
+```
+
+---
+
+## API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/state` | Current timer state |
+| POST | `/state` | Update timer state |
+| GET | `/tasks` | List tasks |
+| POST | `/tasks` | Create a task |
+| PUT | `/tasks/{id}` | Toggle task completion |
+| GET | `/sessions` | Session history |
+| POST | `/sessions` | Log a session |
+| GET | `/journal` | Journal entries |
+| POST | `/journal` | Create entry |
+| GET | `/audio` | List audio tracks |
+| POST | `/audio` | Add audio track |
+| GET | `/history` | Combined timeline |
+| GET | `/analytics/heatmap` | Focus score heatmap |
+| GET | `/voice-notes` | List voice notes |
+| POST | `/voice-notes` | Upload voice note |
+| GET | `/whiteboards` | List whiteboards |
+| POST | `/whiteboards` | Save whiteboard |
+
+---
+
+## Problems Faced & How I Fixed Them
+
+When I picked this project up, it had some rough edges that made it frustrating to work with. Here's what was wrong and how I sorted it out.
+
+### 1. The history endpoint silently returned nothing
+
+There was a route for `GET /history` meant to show a combined timeline of completed tasks, sessions, and journal entries. The code built a list of events but never returned it — no `return` statement. So hitting the endpoint just gave back an empty response with no error. I added the missing `return HistoryResponse(events=events)` to make it actually work.
+
+### 2. No tests — at all
+
+The project had zero tests. Not one. Frontend had no test framework installed, backend had no test dependencies. I set up Vitest with React Testing Library on the frontend and pytest with httpx on the backend. Now there are tests for the core timer endpoints and a basic page render test. The db-dependent tests use mocked connections so they don't need Docker to run.
+
+### 3. The Dockerfile had deprecated ENV syntax
+
+The Dockerfile was using the old `ENV key value` format (without `=`) which throws warnings. I updated all of them to `ENV key=value`. Clean builds, no noise in the logs.
+
+### 4. next.config.ts had config keys that did nothing
+
+The config file had `eslint` and `typescript` keys that were silently ignored by Next.js 16. No errors, no warnings — just dead config. I removed them and the build now runs TypeScript checking during compilation as intended.
+
+### 5. The docker-compose file had a deprecated field
+
+It had `version: '3.8'` at the top which Docker Compose has ignored for a while now. I removed it.
+
+### 6. Database URL was hardcoded
+
+The backend could only connect to a database called `postgres` at host `postgres` — if you wanted to run it differently you had to edit `database.py`. I changed it to read from a `DATABASE_URL` environment variable with the old value as fallback, so it works both in Docker and when customized.
+
+### 7. No .dockerignore on the frontend
+
+The frontend Docker build was sending the entire project folder (including `node_modules`) to the Docker daemon — over 400MB of unnecessary bloat. I added a `.dockerignore` that excludes `node_modules`, `.next`, and git files.
+
+---
+
+## License
+
+MIT
