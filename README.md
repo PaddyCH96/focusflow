@@ -102,6 +102,22 @@ python -m pytest
 
 State-related endpoints (`/state`) are tested directly. Database-dependent endpoints (`/tasks`, `/sessions`, etc.) are tested with mocked PostgreSQL connections so tests run without Docker.
 
+### Tests Conducted (Latest Verification)
+
+- **Frontend unit/integration tests**: timer rendering + interactions, page/component behavior, and client-side state transitions
+- **Backend API tests**: `/state` read/write flow, request validation, and error handling with mocked DB connections
+- **Regression checks**: history aggregation route behavior, Docker build sanity, and local startup flow
+
+Recommended verification commands:
+
+```bash
+# Frontend
+cd frontend && npx vitest run
+
+# Backend
+cd backend && python -m pytest
+```
+
 ---
 
 ## Project Structure
