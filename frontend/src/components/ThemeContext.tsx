@@ -1,7 +1,7 @@
 "use client"
 import React, { createContext, useContext, useState, useEffect } from "react"
 
-type Theme = "deep-space" | "forest-zen" | "cyberpunk" | "vintage" | "sattva"
+type Theme = "himalayan"
 
 type ThemeContextType = {
   theme: Theme
@@ -10,23 +10,11 @@ type ThemeContextType = {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
-const THEME_OPTIONS: Theme[] = ["deep-space", "forest-zen", "cyberpunk", "vintage", "sattva"]
-
-const getInitialTheme = (): Theme => {
-  if (typeof window === "undefined") return "deep-space"
-  const stored = localStorage.getItem("focusflow-theme")
-  if (stored && THEME_OPTIONS.includes(stored as Theme)) {
-    return stored as Theme
-  }
-  return "deep-space"
-}
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(getInitialTheme)
+  const [theme, setThemeState] = useState<Theme>("himalayan")
 
   useEffect(() => {
     document.body.setAttribute("data-theme", theme)
-    localStorage.setItem("focusflow-theme", theme)
   }, [theme])
 
   const setTheme = (t: Theme) => {

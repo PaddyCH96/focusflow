@@ -1,75 +1,23 @@
 @import "tailwindcss";
 
 :root {
-  --ambient: #050505;
-  --surface: #0f111a;
-  --surface-hover: #1a1d2d;
-  --primary: #6366f1;
-  --secondary: #2dd4bf;
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --border-line: rgba(255,255,255,0.05);
-  --font-body: var(--font-geist-sans), sans-serif;
-}
+  --ambient: #0B0B0B;
+  --surface: #1A1715;
+  --surface-hover: #2A2725;
+  --primary: #D6B98A;
+  --primary-dim: #9C7B52;
+  --secondary: #8B7355;
+  --text-main: #F2E9DC;
+  --text-muted: #9C8E7E;
+  --border-line: rgba(214, 185, 138, 0.10);
+  --glow-gold: rgba(214, 185, 138, 0.25);
 
-[data-theme="deep-space"] {
-  --ambient: #030305;
-  --surface: #0a0b10;
-  --surface-hover: #12141d;
-  --primary: #818cf8;
-  --secondary: #2dd4bf;
-  --text-main: #f1f5f9;
-  --text-muted: #64748b;
-  --border-line: rgba(255,255,255,0.05);
-  --font-body: var(--font-geist-sans), sans-serif;
-}
+  --stone-dark: #1E1B19;
+  --stone-mid: #2A2725;
+  --stone-light: #3B3632;
 
-[data-theme="forest-zen"] {
-  --ambient: #111c18;
-  --surface: #1a2924;
-  --surface-hover: #223730;
-  --primary: #34d399;
-  --secondary: #fcd34d;
-  --text-main: #d1fae5;
-  --text-muted: #6ee7b7;
-  --border-line: rgba(52,211,153,0.1);
-  --font-body: var(--font-geist-sans), sans-serif;
-}
-
-[data-theme="cyberpunk"] {
-  --ambient: #090a0f;
-  --surface: #12141c;
-  --surface-hover: #1b1e2a;
-  --primary: #f014c2;
-  --secondary: #00f0ff;
-  --text-main: #ffe4f8;
-  --text-muted: #a37ba6;
-  --border-line: rgba(240,20,194,0.3);
-  --font-body: var(--font-geist-mono), monospace;
-}
-
-[data-theme="vintage"] {
-  --ambient: #f7f3eb;
-  --surface: #ebe3d5;
-  --surface-hover: #dfd4c1;
-  --primary: #b45309;
-  --secondary: #475569;
-  --text-main: #1c1917;
-  --text-muted: #57534e;
-  --border-line: rgba(0,0,0,0.1);
-  --font-body: 'Playfair Display', serif;
-}
-
-[data-theme="sattva"] {
-  --ambient: #fcf9f2;
-  --surface: #ffffff;
-  --surface-hover: #f3eee3;
-  --primary: #ea580c;
-  --secondary: #d97706;
-  --text-main: #431407;
-  --text-muted: #9a3412;
-  --border-line: rgba(234,88,12,0.15);
-  --font-body: var(--font-geist-sans), sans-serif;
+  --font-heading: "Playfair Display", "Georgia", serif;
+  --font-body: "Inter", "SF Pro", system-ui, sans-serif;
 }
 
 @theme inline {
@@ -77,55 +25,126 @@
   --color-surface: var(--surface);
   --color-surface-hover: var(--surface-hover);
   --color-primary: var(--primary);
+  --color-primary-dim: var(--primary-dim);
   --color-secondary: var(--secondary);
   --color-text-main: var(--text-main);
   --color-text-muted: var(--text-muted);
   --color-border-line: var(--border-line);
+  --color-stone-dark: var(--stone-dark);
+  --color-stone-mid: var(--stone-mid);
+  --color-stone-light: var(--stone-light);
+  --font-heading: var(--font-heading);
   --font-sans: var(--font-body);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background-color: var(--ambient);
   color: var(--text-main);
   font-family: var(--font-body);
-  transition: background-color 0.5s ease, color 0.5s ease;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom Scrollbar */
-.custom-scrollbar::-webkit-scrollbar {
+::selection {
+  background: rgba(214, 185, 138, 0.3);
+  color: var(--text-main);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
   width: 4px;
 }
-.custom-scrollbar::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
   background: transparent;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--surface-hover);
+::-webkit-scrollbar-thumb {
+  background: var(--stone-mid);
   border-radius: 4px;
 }
 
-.projection-shell {
-  perspective: 1400px;
-  transform-style: preserve-3d;
+/* Glass panel */
+.glass-panel {
+  background: linear-gradient(
+    145deg,
+    rgba(42, 39, 37, 0.6),
+    rgba(26, 23, 21, 0.8)
+  );
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(214, 185, 138, 0.08);
 }
 
-.ethopic-glass {
-  background: linear-gradient(145deg, color-mix(in srgb, var(--surface) 88%, transparent), color-mix(in srgb, var(--ambient) 80%, transparent));
-  border: 1px solid color-mix(in srgb, var(--border-line) 80%, transparent);
+.glass-panel:hover {
+  border-color: rgba(214, 185, 138, 0.15);
+}
+
+.glass-panel-light {
+  background: linear-gradient(
+    145deg,
+    rgba(59, 54, 50, 0.5),
+    rgba(42, 39, 37, 0.7)
+  );
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(214, 185, 138, 0.06);
+}
+
+/* Stone surface texture simulation */
+.stone-surface {
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(59, 54, 50, 0.3) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(42, 39, 37, 0.4) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, rgba(30, 27, 25, 0.5) 0%, transparent 50%),
+    linear-gradient(180deg, var(--stone-mid) 0%, var(--stone-dark) 100%);
+}
+
+.stone-surface-light {
+  background:
+    radial-gradient(ellipse at 30% 40%, rgba(214, 185, 138, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 60%, rgba(59, 54, 50, 0.2) 0%, transparent 50%),
+    linear-gradient(180deg, var(--stone-light) 0%, var(--stone-mid) 100%);
+}
+
+/* Gold glow */
+.gold-glow {
   box-shadow:
-    0 30px 80px color-mix(in srgb, var(--ambient) 65%, transparent),
-    inset 0 1px 0 color-mix(in srgb, white 35%, transparent);
-  backdrop-filter: blur(22px) saturate(130%);
+    0 0 30px rgba(214, 185, 138, 0.15),
+    0 0 60px rgba(214, 185, 138, 0.05);
 }
 
-.projection-card {
-  transform: rotateX(5deg) rotateY(-5deg) translateZ(0);
-  transition: transform 400ms ease, box-shadow 400ms ease, border-color 400ms ease;
-}
-
-.projection-card:hover {
-  transform: rotateX(0deg) rotateY(0deg) translateZ(14px);
-  border-color: color-mix(in srgb, var(--primary) 45%, var(--border-line));
+.gold-glow-active {
   box-shadow:
-    0 45px 90px color-mix(in srgb, var(--ambient) 65%, transparent),
-    0 0 40px color-mix(in srgb, var(--primary) 18%, transparent);
+    0 0 40px rgba(214, 185, 138, 0.3),
+    0 0 80px rgba(214, 185, 138, 0.1);
+}
+
+/* Frosted mountain fog */
+.fog-layer {
+  background: linear-gradient(
+    180deg,
+    rgba(11, 11, 11, 0) 0%,
+    rgba(11, 11, 11, 0.3) 40%,
+    rgba(11, 11, 11, 0.6) 70%,
+    rgba(11, 11, 11, 0.9) 100%
+  );
+}
+
+/* Typography utilities */
+.heading-serif {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.text-balance {
+  text-wrap: balance;
 }
