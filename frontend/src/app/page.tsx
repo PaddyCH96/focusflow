@@ -1,301 +1,547 @@
 "use client"
-import { useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { Shield, Plus } from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import dynamic from "next/dynamic"
+import { Settings, Headphones, Menu, X, Play, Pause, RotateCcw, CheckCircle2, Circle, Trash2, Sparkles, Brain, BarChart3, Timer as TimerIcon, ChevronLeft, ChevronRight } from "lucide-react"
 import { useTheme } from "@/components/ThemeContext"
-import Timer from "@/components/Timer"
-import Sidebar from "@/components/Sidebar"
-import Stats from "@/components/Stats"
-import TaskList from "@/components/TaskList"
-import WisdomPanel from "@/components/WisdomPanel"
-import ActivityGraph from "@/components/ActivityGraph"
-import Timeline from "@/components/Timeline"
-import AudioPlayer from "@/components/AudioPlayer"
-import AtmosphericBackground from "@/components/AtmosphericBackground"
-import PranayamaRing from "@/components/PranayamaRing"
-import VoiceNotes from "@/components/VoiceNotes"
-import Whiteboard from "@/components/Whiteboard"
+import { useAudio } from "@/lib/hooks/useAudio"
+import { useTasks } from "@/lib/hooks/useTasks"
+import { useSessions } from "@/lib/hooks/useSessions"
+import {
+  MandalaPattern,
+  TempleSilhouette,
+} from "@/components/VedicOrnaments"
+const Scene3D = dynamic(() => import("@/components/Scene3D").then(m => ({ default: m.Scene3D })), { ssr: false })
+import type { View, ThemeId } from "@/lib/storage/types"
+import { themes, getTheme } from "@/lib/themes"
+import { DURATIONS } from "@/lib/constants"
 
-type View = "focus" | "tasks" | "insights" | "breath" | "ambient"
+const SOUND_LABELS: Record<string, string> = {
+  rain: "Rain",
+  ocean: "Ocean",
+  stream: "Stream",
+  wind: "Wind",
+  forest: "Forest",
+  fireplace: "Fireplace",
+  cafe: "Cafe",
+  night: "Night",
+}
 
-function FocusView({
-  mode,
-  setMode,
-  strictMode,
-  timerType,
-  setTimerType,
-}: {
-  mode: "work" | "shortBreak" | "longBreak"
-  setMode: (m: "work" | "shortBreak" | "longBreak") => void
-  strictMode: boolean
-  timerType: "pomodoro" | "flowmodoro"
-  setTimerType: (t: "pomodoro" | "flowmodoro") => void
-}) {
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center min-h-0">
-      <Timer
-        mode={mode}
-        setMode={setMode}
-        strictMode={strictMode}
-        timerType={timerType}
-        setTimerType={setTimerType}
-      />
+const SOUND_ICONS: Record<string, string> = {
+  rain: "🌧️",
+  ocean: "🌊",
+  stream: "💧",
+  wind: "💨",
+  forest: "🌲",
+  fireplace: "🔥",
+  cafe: "☕",
+  night: "🌙",
+}
 
-      {/* Bottom progress cards */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5, duration: 0.6 }}
-        className="flex items-stretch gap-3 mt-6 max-w-2xl w-full px-4"
-      >
-        <div className="flex-1 min-w-0">
-          <Stats />
-        </div>
-        <div className="flex-[2] min-w-0">
-          <WisdomPanel />
-        </div>
-      </motion.div>
-    </div>
-  )
+const VIEW_ICONS: Record<View, React.ReactNode> = {
+  focus: <Brain size={18} />,
+  timer: <TimerIcon size={18} />,
+  tasks: <CheckCircle2 size={18} />,
+  insights: <BarChart3 size={18} />,
+  breath: <Sparkles size={18} />,
+  ambient: <Headphones size={18} />,
 }
 
 export default function Home() {
-  const { theme } = useTheme()
+  const { themeId, colors, setTheme } = useTheme()
+  const { sounds, masterVolume, toggle: toggleSound, setVolume, setMasterVolume } = useAudio()
+  const { tasks, addTask, toggleTask, deleteTask } = useTasks()
+  const { sessions, addSession } = useSessions()
+  const [sidebarOpen, setSidebarOpen] = useState(true)
   const [activeView, setActiveView] = useState<View>("focus")
-  const [strictMode, setStrictMode] = useState(false)
-  const [timerType, setTimerType] = useState<"pomodoro" | "flowmodoro">("pomodoro")
-  const [mode, setMode] = useState<"work" | "shortBreak" | "longBreak">("work")
-  const [workspace, setWorkspace] = useState<"dashboard" | "voice" | "whiteboard">("dashboard")
+  const [timerMode, setTimerMode] = useState<"work" | "shortBreak" | "longBreak">("work")
+  const [timeRemaining, setTimeRemaining] = useState(DURATIONS.work)
+  const [timerRunning, setTimerRunning] = useState(false)
+  const [taskInput, setTaskInput] = useState("")
+  const [showSettings, setShowSettings] = useState(false)
+  const timerCanvasRef = useRef<HTMLCanvasElement>(null!)
+  const timerViewCanvasRef = useRef<HTMLCanvasElement>(null!)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const themeDots: ThemeId[] = ["sunrise", "daylight", "sunset", "midnight"]
+
+  const totalFocusMinutes = useMemo(
+    () => sessions.filter(s => s.type === "work").reduce((a, s) => a + s.duration, 0) / 60,
+    [sessions]
+  )
+
+  const timerProgress = useMemo(() => {
+    const total = DURATIONS[timerMode]
+    return 1 - timeRemaining / total
+  }, [timeRemaining, timerMode])
+
+  const todaySessions = useMemo(
+    () => sessions.filter(s => new Date(s.startTime).toDateString() === new Date().toDateString()),
+    [sessions]
+  )
+
+  const formatTime = useCallback((seconds: number) => {
+    const m = Math.floor(seconds / 60)
+    const s = seconds % 60
+    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`
+  }, [])
+
+  const handleSessionComplete = useCallback(() => {
+    const now = new Date().toISOString()
+    addSession({
+      id: crypto.randomUUID(),
+      startTime: now,
+      duration: DURATIONS[timerMode] - timeRemaining,
+      type: timerMode === "work" ? "work" : timerMode === "shortBreak" ? "shortBreak" : "longBreak",
+      completed: true,
+      timerType: "pomodoro",
+    })
+  }, [timerMode, timeRemaining, addSession])
+
+  const startTimer = useCallback(() => {
+    if (timeRemaining <= 0) {
+      const nextMode = timerMode === "work" ? "shortBreak" : "work"
+      setTimerMode(nextMode)
+      setTimeRemaining(DURATIONS[nextMode])
+    }
+    setTimerRunning(true)
+  }, [timeRemaining, timerMode])
+
+  const pauseTimer = useCallback(() => {
+    setTimerRunning(false)
+  }, [])
+
+  const resetTimer = useCallback(() => {
+    setTimerRunning(false)
+    setTimeRemaining(DURATIONS[timerMode])
+  }, [timerMode])
+
+  useEffect(() => {
+    if (timerRunning) {
+      intervalRef.current = setInterval(() => {
+        setTimeRemaining(prev => {
+          if (prev <= 1) {
+            setTimerRunning(false)
+            handleSessionComplete()
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
+    }
+  }, [timerRunning, handleSessionComplete])
+
+  useEffect(() => {
+    setTimeRemaining(DURATIONS[timerMode])
+    setTimerRunning(false)
+  }, [timerMode])
+
+  function drawTimer(ctx: CanvasRenderingContext2D | null) {
+    if (!ctx) return
+    const size = 280
+    const cx = size / 2
+    const cy = size / 2
+    const r = 120
+    const lineW = 4
+
+    ctx.clearRect(0, 0, size, size)
+
+    ctx.beginPath()
+    ctx.arc(cx, cy, r, 0, Math.PI * 2)
+    ctx.strokeStyle = colors.borderLine
+    ctx.lineWidth = lineW
+    ctx.stroke()
+
+    ctx.beginPath()
+    ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * timerProgress)
+    ctx.strokeStyle = colors.primary
+    ctx.lineWidth = lineW
+    ctx.lineCap = "round"
+    ctx.stroke()
+
+    const ticks = 60
+    for (let i = 0; i < ticks; i++) {
+      const angle = (i / ticks) * Math.PI * 2 - Math.PI / 2
+      const inner = i % 5 === 0 ? r - 10 : r - 6
+      ctx.beginPath()
+      ctx.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner)
+      ctx.lineTo(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r)
+      ctx.strokeStyle = i % 5 === 0 ? colors.primary : colors.borderLine
+      ctx.lineWidth = i % 5 === 0 ? 1.5 : 0.8
+      ctx.stroke()
+    }
+
+    const progressTicks = Math.floor(timerProgress * ticks)
+    for (let i = 0; i < progressTicks; i++) {
+      const angle = (i / ticks) * Math.PI * 2 - Math.PI / 2
+      const inner = i % 5 === 0 ? r - 10 : r - 6
+      ctx.beginPath()
+      ctx.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner)
+      ctx.lineTo(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r)
+      ctx.strokeStyle = colors.primary
+      ctx.lineWidth = i % 5 === 0 ? 1.5 : 0.8
+      ctx.stroke()
+    }
+  }
+
+  useEffect(() => {
+    drawTimer(timerCanvasRef.current?.getContext("2d") ?? null)
+  }, [timerProgress, colors])
+
+  useEffect(() => {
+    drawTimer(timerViewCanvasRef.current?.getContext("2d") ?? null)
+  }, [timerProgress, colors])
 
   return (
-    <main className="flex-1 flex min-h-screen relative">
-      <AtmosphericBackground />
+    <div className="app-container">
+      <Scene3D />
 
-      {/* Left sidebar */}
-      <aside className="fixed left-0 top-0 bottom-0 z-40 flex flex-col items-center border-r border-border-line/50"
-        style={{
-          width: "72px",
-          background: "linear-gradient(180deg, rgba(11,11,11,0.9) 0%, rgba(11,11,11,0.7) 100%)",
-          backdropFilter: "blur(20px)",
-        }}
-      >
-        <Sidebar activeView={activeView} onViewChange={setActiveView} />
+      <aside className={`sidebar ${sidebarOpen ? "open" : "collapsed"}`}>
+        <div className="sidebar-header">
+          {sidebarOpen && (
+            <div className="logo-section">
+              <MandalaPattern className="logo-mandala" ariaHidden />
+              <div>
+                <h1 className="logo-title">FocusFlow</h1>
+                <p className="logo-subtitle">Deep Work</p>
+              </div>
+            </div>
+          )}
+          <button className="sidebar-toggle" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}>
+            {sidebarOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+          </button>
+        </div>
+        <nav className="sidebar-nav">
+          {(Object.keys(VIEW_ICONS) as View[]).map(view => (
+            <button
+              key={view}
+              className={`nav-item ${activeView === view ? "active" : ""}`}
+              onClick={() => setActiveView(view)}
+              aria-label={view.charAt(0).toUpperCase() + view.slice(1)}
+            >
+              {VIEW_ICONS[view]}
+              {sidebarOpen && <span>{view.charAt(0).toUpperCase() + view.slice(1)}</span>}
+            </button>
+          ))}
+        </nav>
+        {sidebarOpen && (
+          <div className="sidebar-footer">
+            <div aria-hidden="true"><TempleSilhouette height={40} /></div>
+          </div>
+        )}
       </aside>
 
-      {/* Header bar (top right area) */}
-      <header className="fixed top-0 right-0 left-[72px] z-30 flex items-center justify-between px-8 py-4"
-        style={{
-          background: "linear-gradient(180deg, rgba(11,11,11,0.6) 0%, transparent 100%)",
-        }}
-      >
-        <motion.span
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="heading-serif text-lg text-text-main/60"
-        >
-          {activeView === "focus" && "Deep Work"}
-          {activeView === "tasks" && "Practice"}
-          {activeView === "insights" && "Reflect"}
-          {activeView === "breath" && "Pranayama"}
-          {activeView === "ambient" && "Soundscape"}
-        </motion.span>
-
-        <div className="flex items-center gap-3">
-          {/* Workspace switcher */}
-          <div className="flex items-center gap-1 px-1.5 py-1 rounded-full glass-panel-light">
-            <button
-              onClick={() => setWorkspace("dashboard")}
-              className={`px-3 py-1.5 text-[10px] font-medium rounded-full transition-all duration-300 tracking-wider uppercase ${
-                workspace === "dashboard"
-                  ? "bg-primary/10 text-primary border border-primary/20"
-                  : "text-text-muted hover:text-text-main"
-              }`}
-            >
-              Focus
+      <div className="main-area">
+        <header className="top-bar">
+          <div className="top-bar-left">
+            <button className="icon-btn" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label={sidebarOpen ? "Close menu" : "Open menu"}>
+              {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
-            <button
-              onClick={() => setWorkspace("voice")}
-              className={`px-3 py-1.5 text-[10px] font-medium rounded-full transition-all duration-300 tracking-wider uppercase ${
-                workspace === "voice"
-                  ? "bg-primary/10 text-primary border border-primary/20"
-                  : "text-text-muted hover:text-text-main"
-              }`}
-            >
-              Vani
-            </button>
-            <button
-              onClick={() => setWorkspace("whiteboard")}
-              className={`px-3 py-1.5 text-[10px] font-medium rounded-full transition-all duration-300 tracking-wider uppercase ${
-                workspace === "whiteboard"
-                  ? "bg-primary/10 text-primary border border-primary/20"
-                  : "text-text-muted hover:text-text-main"
-              }`}
-            >
-              Mandala
+            <span className="page-title">{activeView.charAt(0).toUpperCase() + activeView.slice(1)}</span>
+          </div>
+          <div className="top-bar-center">
+            <div className="theme-dots">
+              {themeDots.map(id => (
+                <button
+                  key={id}
+                  className={`theme-dot ${themeId === id ? "active" : ""}`}
+                  style={{
+                    background: getTheme(id).primary,
+                    borderColor: themeId === id ? getTheme(id).primary : "transparent",
+                  }}
+                  onClick={() => setTheme(id)}
+                  title={getTheme(id).name}
+                />
+              ))}
+            </div>
+          </div>
+          <div className="top-bar-right">
+            <button className="icon-btn" onClick={() => setShowSettings(!showSettings)} aria-label="Open settings">
+              <Settings size={18} />
             </button>
           </div>
+        </header>
 
-          <div className="w-px h-6 bg-border-line" />
-
-          {/* Strict mode toggle */}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setStrictMode(!strictMode)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300"
-            style={{
-              color: strictMode ? "var(--primary)" : "var(--text-muted)",
-              background: strictMode ? "rgba(214,185,138,0.08)" : "transparent",
-              border: strictMode ? "1px solid rgba(214,185,138,0.2)" : "1px solid transparent",
-            }}
-          >
-            <Shield size={14} />
-            <span>Strict</span>
-          </motion.button>
-
-          {/* Ambient controls */}
-          <AudioPlayer mode={mode} />
-        </div>
-      </header>
-
-      {/* Main content area */}
-      <div className="flex-1 ml-[72px] pt-20 pb-8 px-6 overflow-y-auto min-h-0">
-        <AnimatePresence mode="wait">
-          {workspace === "dashboard" ? (
-            <motion.div
-              key={workspace}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex flex-col items-center min-h-0"
-            >
-              <AnimatePresence mode="wait">
-                {activeView === "focus" && (
-                  <motion.div
-                    key="focus"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="w-full flex flex-col items-center"
-                  >
-                    <FocusView
-                      mode={mode}
-                      setMode={setMode}
-                      strictMode={strictMode}
-                      timerType={timerType}
-                      setTimerType={setTimerType}
-                    />
-                  </motion.div>
-                )}
-
-                {activeView === "tasks" && (
-                  <motion.div
-                    key="tasks"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="w-full max-w-lg mx-auto pt-8"
-                  >
-                    <TaskList />
-                  </motion.div>
-                )}
-
-                {activeView === "insights" && (
-                  <motion.div
-                    key="insights"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="w-full max-w-3xl mx-auto pt-8 space-y-6"
-                  >
-                    <ActivityGraph />
-                    <Timeline />
-                  </motion.div>
-                )}
-
-                {activeView === "breath" && (
-                  <motion.div
-                    key="breath"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="w-full max-w-lg mx-auto pt-16 flex flex-col items-center"
-                  >
-                    <div className="text-center mb-8">
-                      <h2 className="heading-serif text-2xl text-text-main mb-2">Pranayama</h2>
-                      <p className="text-sm text-text-muted">4-4-4 breathing cycle</p>
+        <main className="content">
+          {activeView === "focus" && (
+            <div className="focus-view">
+              <div className="section-card greeting-card">
+                <div className="greeting-content">
+                  <MandalaPattern className="greeting-mandala" ariaHidden />
+                  <h2 className="greeting-title">Welcome to FocusFlow</h2>
+                  <p className="greeting-subtitle">Your sacred space for deep work</p>
+                </div>
+              </div>
+              <div className="section-card timer-card">
+                <div className="timer-display">
+                  <div className="timer-dial">
+                    <canvas ref={timerCanvasRef} width={280} height={280} className="timer-canvas" role="img" aria-label={`Timer: ${formatTime(timeRemaining)}`} />
+                    <div className="timer-center">
+                      <span className="timer-time">{formatTime(timeRemaining)}</span>
+                      <span className="timer-label">{timerMode === "work" ? "Focus" : timerMode === "shortBreak" ? "Short Break" : "Long Break"}</span>
                     </div>
-                    <div className="relative w-[300px] h-[300px] stone-surface rounded-full flex items-center justify-center shadow-2xl"
-                      style={{
-                        boxShadow: "inset 0 2px 4px rgba(214,185,138,0.08), inset 0 -2px 4px rgba(0,0,0,0.4), 0 20px 60px rgba(0,0,0,0.5)",
-                      }}
-                    >
-                      <div className="absolute inset-[6px] rounded-full stone-surface-light" />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <PranayamaRing standalone />
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-
-                {activeView === "ambient" && (
-                  <motion.div
-                    key="ambient"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="w-full max-w-md mx-auto pt-16"
-                  >
-                    <div className="text-center mb-10">
-                      <h2 className="heading-serif text-2xl text-text-main mb-2">Soundscape</h2>
-                      <p className="text-sm text-text-muted">Ambient audio for deep focus</p>
-                    </div>
-                    <AudioPlayer mode={mode} expanded />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          ) : workspace === "voice" ? (
-            <motion.div
-              key="voice"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="w-full max-w-3xl mx-auto pt-8"
-            >
-              <VoiceNotes />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="whiteboard"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              className="w-full h-full min-h-[70vh] pt-8"
-            >
-              <Whiteboard />
-            </motion.div>
+                  </div>
+                  <div className="timer-controls">
+                    {!timerRunning ? (
+                      <button className="btn-primary" onClick={startTimer} aria-label="Start timer">
+                        <Play size={20} /> Start
+                      </button>
+                    ) : (
+                      <button className="btn-primary" onClick={pauseTimer} aria-label="Pause timer">
+                        <Pause size={20} /> Pause
+                      </button>
+                    )}
+                    <button className="btn-ghost" onClick={resetTimer} aria-label="Reset timer">
+                      <RotateCcw size={16} /> Reset
+                    </button>
+                  </div>
+                  <div className="timer-mode-tabs" role="tablist" aria-label="Timer mode">
+                    {(["work", "shortBreak", "longBreak"] as const).map(mode => (
+                      <button
+                        key={mode}
+                        role="tab"
+                        aria-selected={timerMode === mode}
+                        className={`mode-tab ${timerMode === mode ? "active" : ""}`}
+                        onClick={() => setTimerMode(mode)}
+                      >
+                        {mode === "work" ? "Focus" : mode === "shortBreak" ? "Short Break" : "Long Break"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="section-card quote-card">
+                <blockquote className="daily-quote">
+                  "The mind is everything. What you think you become."
+                  <cite>— Buddha</cite>
+                </blockquote>
+              </div>
+            </div>
           )}
-        </AnimatePresence>
+
+          {activeView === "timer" && (
+            <div className="focus-view">
+              <div className="section-card timer-card">
+                <div className="timer-display">
+                  <div className="timer-dial">
+                    <canvas ref={timerViewCanvasRef} width={280} height={280} className="timer-canvas" role="img" aria-label={`Timer: ${formatTime(timeRemaining)}`} />
+                    <div className="timer-center">
+                      <span className="timer-time">{formatTime(timeRemaining)}</span>
+                      <span className="timer-label">{timerMode === "work" ? "Focus" : timerMode === "shortBreak" ? "Short Break" : "Long Break"}</span>
+                    </div>
+                  </div>
+                  <div className="timer-controls">
+                    {!timerRunning ? (
+                      <button className="btn-primary" onClick={startTimer}>
+                        <Play size={20} /> Start
+                      </button>
+                    ) : (
+                      <button className="btn-primary" onClick={pauseTimer}>
+                        <Pause size={20} /> Pause
+                      </button>
+                    )}
+                    <button className="btn-ghost" onClick={resetTimer}>
+                      <RotateCcw size={16} /> Reset
+                    </button>
+                  </div>
+                  <div className="timer-mode-tabs">
+                    {(["work", "shortBreak", "longBreak"] as const).map(mode => (
+                      <button
+                        key={mode}
+                        className={`mode-tab ${timerMode === mode ? "active" : ""}`}
+                        onClick={() => setTimerMode(mode)}
+                      >
+                        {mode === "work" ? "Focus" : mode === "shortBreak" ? "Short Break" : "Long Break"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeView === "tasks" && (
+            <div className="tasks-view">
+              <div className="section-card">
+                <h3 className="section-title">Daily Tasks</h3>
+                <div className="task-input-row">
+                  <input
+                    className="task-input"
+                    placeholder="Add a task..."
+                    value={taskInput}
+                    onChange={e => setTaskInput(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === "Enter" && taskInput.trim()) {
+                        addTask(taskInput.trim())
+                        setTaskInput("")
+                      }
+                    }}
+                  />
+                  <button
+                    className="btn-primary btn-sm"
+                    onClick={() => {
+                      if (taskInput.trim()) {
+                        addTask(taskInput.trim())
+                        setTaskInput("")
+                      }
+                    }}
+                  >
+                    Add
+                  </button>
+                </div>
+                <ul className="task-list">
+                  {tasks.map(task => (
+                    <li key={task.id} className={`task-item ${task.completed ? "completed" : ""}`}>
+                      <button className="task-check" onClick={() => toggleTask(task.id)} aria-label={task.completed ? "Mark incomplete" : "Mark complete"}>
+                        {task.completed ? <CheckCircle2 size={18} /> : <Circle size={18} />}
+                      </button>
+                      <span className="task-text">{task.text}</span>
+                      <button className="task-delete" onClick={() => deleteTask(task.id)} aria-label={`Delete task: ${task.text}`}>
+                        <Trash2 size={14} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+
+          {activeView === "insights" && (
+            <div className="insights-view">
+              <div className="section-card">
+                <h3 className="section-title">Today's Focus</h3>
+                <div className="stats-grid">
+                  <div className="stat-item">
+                    <span className="stat-value">{todaySessions.length}</span>
+                    <span className="stat-label">Sessions</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-value">{totalFocusMinutes.toFixed(0)}m</span>
+                    <span className="stat-label">Total Focus</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-value">{sessions.length}</span>
+                    <span className="stat-label">All Time</span>
+                  </div>
+                </div>
+              </div>
+              <div className="section-card">
+                <h3 className="section-title">Recent Sessions</h3>
+                <div className="session-list">
+                  {sessions.slice(0, 10).map(s => (
+                    <div key={s.id} className="session-row">
+                      <span className="session-type">{s.type}</span>
+                      <span className="session-dur">{Math.floor(s.duration / 60)}m</span>
+                      <span className="session-time">{new Date(s.startTime).toLocaleTimeString()}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeView === "breath" && (
+            <div className="breath-view">
+              <div className="section-card breath-card">
+                <h3 className="section-title">Pranayama</h3>
+                <div className="breath-circle">
+                  <div className="breath-ring">
+                    <MandalaPattern className="breath-mandala" ariaHidden />
+                  </div>
+                </div>
+                <p className="breath-hint">Breathe in peace, breathe out stress</p>
+              </div>
+            </div>
+          )}
+
+          {activeView === "ambient" && (
+            <div className="ambient-view">
+              <div className="section-card">
+                <div className="ambient-header">
+                  <h3 className="section-title">Ambient Sounds</h3>
+                  <div className="master-volume-row">
+                    <label className="vol-label">Master</label>
+                    <input
+                      type="range"
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      value={masterVolume}
+                      onChange={e => setMasterVolume(parseFloat(e.target.value))}
+                      className="volume-slider"
+                    />
+                  </div>
+                </div>
+                <div className="sound-grid">
+                  {sounds.map(sound => (
+                    <button
+                      key={sound.id}
+                      className={`sound-card ${sound.playing ? "playing" : ""}`}
+                      onClick={() => toggleSound(sound.id)}
+                    >
+                      <span className="sound-icon">{SOUND_ICONS[sound.id]}</span>
+                      <span className="sound-name">{SOUND_LABELS[sound.id]}</span>
+                      {sound.playing && (
+                        <input
+                          type="range"
+                          min={0}
+                          max={1}
+                          step={0.05}
+                          value={sound.volume}
+                          onClick={e => e.stopPropagation()}
+                          onChange={e => setVolume(sound.id, parseFloat(e.target.value))}
+                          className="sound-volume"
+                        />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </main>
       </div>
 
-      {/* Floating quick task button */}
-      <div className="fixed bottom-8 right-8 z-50">
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="flex items-center justify-center w-12 h-12 rounded-full gold-glow transition-all duration-300"
-          style={{
-            background: "linear-gradient(135deg, rgba(214,185,138,0.2), rgba(214,185,138,0.08))",
-            border: "1px solid rgba(214,185,138,0.2)",
-            color: "var(--primary)",
-          }}
-          onClick={() => setActiveView("tasks")}
-          title="Quick Task"
-        >
-          <Plus size={20} />
-        </motion.button>
-      </div>
-    </main>
+      {showSettings && (
+        <div className="settings-overlay" onClick={() => setShowSettings(false)}>
+          <div className="settings-panel" onClick={e => e.stopPropagation()}>
+            <h3>Settings</h3>
+            <div className="settings-section">
+              <label>Theme</label>
+              <div className="theme-grid">
+                {themeDots.map(id => (
+                  <button
+                    key={id}
+                    className={`theme-option ${themeId === id ? "active" : ""}`}
+                    onClick={() => setTheme(id)}
+                  >
+                    <span
+                      className="theme-swatch"
+                      style={{ background: getTheme(id).primary }}
+                    />
+                    <span>{getTheme(id).name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="settings-section">
+              <label>Master Volume</label>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={masterVolume}
+                onChange={e => setMasterVolume(parseFloat(e.target.value))}
+                className="volume-slider"
+              />
+            </div>
+            <button className="btn-primary btn-sm" onClick={() => setShowSettings(false)}>Close</button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
