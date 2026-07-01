@@ -4,10 +4,11 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
-COPY . .
-# We disable telemetry to avoid interactive prompts and network requests
+# Copy application source with cache busting using git commit hash
+COPY . . --chown=node:node
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN npm run build
+# Add git commit hash to package.json to trigger rebuild when source changes
+RUN git rev-parse HEAD > /app/.git-hash 2>/dev/null || true && npm run build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
