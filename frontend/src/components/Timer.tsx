@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Play, Pause, RotateCcw, Coffee, TrendingUp, Circle, Flame } from "lucide-react"
 import PranayamaRing from "./PranayamaRing"
@@ -27,6 +27,23 @@ export default function Timer({ mode, setMode, strictMode, timerType, setTimerTy
   const [isActive, setIsActive] = useState(false)
   const [cycle, setCycle] = useState(0)
 
+  const timeLeftRef = useRef(25 * 60)
+  const timeElapsedRef = useRef(0)
+  const isActiveRef = useRef(false)
+  const modeRef = useRef(mode)
+  const timerTypeRef = useRef(timerType)
+  const cycleRef = useRef(0)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    timeLeftRef.current = timeLeft
+    timeElapsedRef.current = timeElapsed
+    isActiveRef.current = isActive
+    modeRef.current = mode
+    timerTypeRef.current = timerType
+    cycleRef.current = cycle
+  }, [timeLeft, timeElapsed, isActive, mode, timerType, cycle])
+
   const logSession = useCallback(async (duration: number, status: string) => {
     await fetch("http://localhost:8000/sessions", {
       method: "POST",
@@ -35,56 +52,99 @@ export default function Timer({ mode, setMode, strictMode, timerType, setTimerTy
     })
   }, [])
 
+  const clearTimerInterval = useCallback(() => {
+    if (intervalRef.current !== null) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+  }, [])
+
   const switchMode = useCallback((newMode: "work" | "shortBreak" | "longBreak") => {
+    clearTimerInterval()
     setIsActive(false)
     setMode(newMode)
     setTimeLeft(MODES[newMode].time)
     setTimeElapsed(0)
-  }, [setMode])
+  }, [setMode, clearTimerInterval])
 
   const handleSessionComplete = useCallback(() => {
+    clearTimerInterval()
     setIsActive(false)
-    if (mode === "work") {
+    const currentMode = modeRef.current
+    const currentCycle = cycleRef.current
+    if (currentMode === "work") {
       logSession(25 * 60, "completed")
-      const newCycle = cycle + 1
+      const newCycle = currentCycle + 1
       setCycle(newCycle)
-      switchMode(newCycle % 4 === 0 ? "longBreak" : "shortBreak")
+      setMode(newCycle % 4 === 0 ? "longBreak" : "shortBreak")
+      setTimeLeft(MODES[newCycle % 4 === 0 ? "longBreak" : "shortBreak"].time)
+      setTimeElapsed(0)
     } else {
-      switchMode("work")
+      setMode("work")
+      setTimeLeft(MODES.work.time)
+      setTimeElapsed(0)
     }
-  }, [mode, cycle, logSession, switchMode])
+  }, [logSession, clearTimerInterval, setMode])
+
+  const startTimer = useCallback(() => {
+    setIsActive(true)
+    intervalRef.current = setInterval(() => {
+      const cm = modeRef.current
+      const ct = timerTypeRef.current
+      if (ct === "flowmodoro" && cm === "work") {
+        timeElapsedRef.current += 1
+        setTimeElapsed(timeElapsedRef.current)
+      } else {
+        const remaining = timeLeftRef.current - 1
+        timeLeftRef.current = remaining
+        setTimeLeft(remaining)
+        if (remaining <= 0) {
+          handleSessionComplete()
+        }
+      }
+    }, 1000)
+  }, [handleSessionComplete])
 
   const engageFlowBreak = () => {
+    clearTimerInterval()
     setIsActive(false)
-    logSession(timeElapsed, "completed")
-    let breakSeconds = Math.floor(timeElapsed / 5)
+    logSession(timeElapsedRef.current, "completed")
+    let breakSeconds = Math.floor(timeElapsedRef.current / 5)
     if (breakSeconds < 60) breakSeconds = 60
-    setCycle(cycle + 1)
+    const newCycle = cycleRef.current + 1
+    setCycle(newCycle)
     setMode("shortBreak")
     setTimeLeft(breakSeconds)
     setTimeElapsed(0)
   }
 
   const toggleTimerType = (t: "pomodoro" | "flowmodoro") => {
-    if (isActive) return
+    if (isActiveRef.current) return
     setTimerType(t)
     switchMode("work")
   }
 
   const toggleTimer = () => {
-    if (strictMode && mode === "work" && isActive) {
-      const duration = timerType === "flowmodoro" ? timeElapsed : 25 * 60 - timeLeft
-      if (duration < 60) { setIsActive(false); return }
+    if (strictMode && modeRef.current === "work" && isActiveRef.current) {
+      const duration = timerTypeRef.current === "flowmodoro" ? timeElapsedRef.current : 25 * 60 - timeLeftRef.current
+      if (duration < 60) { setIsActive(false); clearTimerInterval(); return }
       const confirm = window.confirm("Strict Mode: pausing logs a failed session. Continue?")
       if (!confirm) return
       logSession(duration, "failed")
-      setTimeout(() => switchMode("work"), 2000)
+      clearTimerInterval()
+      setIsActive(false)
       return
     }
-    setIsActive(!isActive)
+    if (isActiveRef.current) {
+      clearTimerInterval()
+      setIsActive(false)
+    } else {
+      startTimer()
+    }
   }
 
   const resetTimer = () => {
+    clearTimerInterval()
     setIsActive(false)
     setTimeLeft(MODES[mode].time)
     setTimeElapsed(0)
@@ -112,21 +172,8 @@ export default function Timer({ mode, setMode, strictMode, timerType, setTimerTy
   }, [strictMode, isActive, mode, timeLeft, timerType, timeElapsed])
 
   useEffect(() => {
-    let interval: NodeJS.Timeout
-    let completionTimeout: ReturnType<typeof setTimeout> | undefined
-    if (isActive) {
-      if (timerType === "flowmodoro" && mode === "work") {
-        interval = setInterval(() => setTimeElapsed((t) => t + 1), 1000)
-      } else {
-        if (timeLeft > 0) interval = setInterval(() => setTimeLeft((t) => t - 1), 1000)
-        else if (timeLeft === 0) completionTimeout = setTimeout(() => handleSessionComplete(), 0)
-      }
-    }
-    return () => {
-      clearInterval(interval)
-      if (completionTimeout) clearTimeout(completionTimeout)
-    }
-  }, [isActive, timeLeft, timerType, mode, handleSessionComplete])
+    return () => clearTimerInterval()
+  }, [clearTimerInterval])
 
   const isFlowWork = timerType === "flowmodoro" && mode === "work"
   const currentRenderTime = isFlowWork ? timeElapsed : timeLeft
