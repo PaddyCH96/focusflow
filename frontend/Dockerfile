@@ -5,12 +5,8 @@ COPY package*.json ./
 RUN npm install
 
 # Copy application source
-COPY . . --chown=node:node
+COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-# Set git commit hash for cache busting
-RUN git rev-parse HEAD > /tmp/build-hash 2>/dev/null || true
-# Add git commit to environment for build timestamping
-RUN echo "NEXT_PUBLIC_GIT_HASH=$(git rev-parse HEAD 2>/dev/null || echo 'unknown')" >> /tmp/build-env && cat /tmp/build-env >> .env.production.local
 RUN npm run build
 
 FROM node:20-alpine AS runner
