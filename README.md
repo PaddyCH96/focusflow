@@ -36,6 +36,44 @@ Built with Next.js, FastAPI, and PostgreSQL, it runs entirely on your machine vi
 
 ---
 
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Frontend (Next.js)                     │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
+│  │   Timer     │  │   Tasks     │  │   Journal   │        │
+│  │  Component  │  │  Component  │  │  Component  │        │
+│  └─────────────┘  └─────────────┘  └─────────────┘        │
+│                         │                                   │
+│                    HTTP/API Calls                          │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Backend (FastAPI)                         │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
+│  │   Router    │  │  Database   │  │   Models    │        │
+│  │   (API)     │  │  (Psycopg2) │  │  (Pydantic) │        │
+│  └─────────────┘  └─────────────┘  └─────────────┘        │
+│                         │                                   │
+│                    SQL Queries                              │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Database (PostgreSQL)                     │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
+│  │   Tasks     │  │  Sessions   │  │   Journal   │        │
+│  │   Table     │  │   Table     │  │   Table     │        │
+│  └─────────────┘  └─────────────┘  └─────────────┘        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**API Documentation:** [Swagger UI](http://localhost:8000/docs) (available when backend is running)
+
+---
+
 ## Quick Start
 
 ### Prerequisites
@@ -151,6 +189,8 @@ focusflow/
 ---
 
 ## API Endpoints
+
+**Interactive API Documentation:** [Swagger UI](http://localhost:8000/docs) | **OpenAPI Spec:** [JSON](http://localhost:8000/openapi.json)
 
 | Method | Path | Description |
 |--------|------|-------------|
