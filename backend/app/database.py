@@ -3,6 +3,7 @@ from psycopg2.extras import RealDictCursor
 import os
 import time
 
+# Support both local and hosted database
 DB_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgrespassword@postgres:5432/focusflow")
 
 def get_db():
@@ -11,6 +12,9 @@ def get_db():
     return conn
 
 def init_db():
+    """Initialize database - only used for local development.
+    For production, use Alembic migrations: alembic upgrade head
+    """
     # Retry logic for Docker compose startup where DB might not be ready instantly
     max_retries = 5
     for i in range(max_retries):
