@@ -10,6 +10,11 @@ services:
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   backend:
     build:
@@ -17,10 +22,15 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgrespassword@postgres:5432/focusflow
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3001,http://localhost:3000}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
     volumes:
       - ./assets:/app/assets
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     restart: always
 
   frontend:
@@ -29,6 +39,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3001:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     depends_on:
       - backend
     restart: always
