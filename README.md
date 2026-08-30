@@ -251,3 +251,4 @@ The frontend Docker build was sending the entire project folder (including `node
 ## License
 
 MIT
+# Railway deployment
