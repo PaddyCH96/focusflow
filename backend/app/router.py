@@ -15,6 +15,24 @@ from .database import get_db
 
 router = APIRouter()
 
+# --- Health Check Endpoints ---
+@router.get("/health")
+def health_check():
+    """Basic health check endpoint."""
+    return {"status": "ok", "service": "focusflow-backend"}
+
+@router.get("/ready")
+def readiness_check():
+    """Readiness check - verifies database connectivity."""
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1")
+        conn.close()
+        return {"status": "ready", "database": "connected"}
+    except Exception as e:
+        raise HTTPException(status_code=503, detail={"status": "not ready", "error": str(e)})
+
 # --- PHASE 1: Timer State ---
 _state = TimerState(mode="work", remaining_seconds=1500, cycle=0)
 

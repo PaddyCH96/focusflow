@@ -4,4 +4,6 @@ pydantic
 psycopg2-binary
 python-multipart
 pytest
+pytest-cov
 httpx
+alembic
