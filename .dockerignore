@@ -1,0 +1,13 @@
+node_modules/
+.next/
+frontend/
+.git/
+.github/
+.planning/
+data/
+assets/
+*.md
+*.txt
+.env
+.env.*
+!.env.example
