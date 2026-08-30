@@ -7,7 +7,6 @@ frontend/
 data/
 assets/
 *.md
-*.txt
 .env
 .env.*
 !.env.example
