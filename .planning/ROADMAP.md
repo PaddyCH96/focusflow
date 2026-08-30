@@ -58,6 +58,7 @@
 ### Phase 5: Backend Deployment
 **Goal:** Deploy FastAPI backend to cloud
 **Duration:** 1 day
+**Status:** 🔄 In Progress
 
 - [ ] Choose platform (Railway/Fly.io/Render)
 - [ ] Configure deployment settings
@@ -68,6 +69,7 @@
 ### Phase 6: Frontend Deployment
 **Goal:** Deploy Next.js frontend to cloud
 **Duration:** 1 day
+**Status:** 🔄 In Progress
 
 - [ ] Choose platform (Vercel/Netlify)
 - [ ] Configure deployment settings
