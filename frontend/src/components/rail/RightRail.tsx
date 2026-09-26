@@ -31,12 +31,12 @@ export function RightRail({
   tasks: Task[]
   goal: number
   onCycleGoal: () => void
-  onToggleTask: (id: string) => void
+  onToggleTask: (id: number) => void
 }) {
   const today = useMemo(() => startOfDay(new Date()), [])
 
   const todaySessions = useMemo(
-    () => sessions.filter(s => s.type === "work" && startOfDay(new Date(s.startTime)).getTime() === today.getTime()),
+    () => sessions.filter(s => s.status === "completed" && startOfDay(new Date(s.timestamp)).getTime() === today.getTime()),
     [sessions, today]
   )
 
@@ -50,7 +50,7 @@ export function RightRail({
     const minutesByDay = days.map(day => {
       const dayEnd = day.getTime() + 86400000
       return sessions
-        .filter(s => s.type === "work" && new Date(s.startTime).getTime() >= day.getTime() && new Date(s.startTime).getTime() < dayEnd)
+        .filter(s => s.status === "completed" && new Date(s.timestamp).getTime() >= day.getTime() && new Date(s.timestamp).getTime() < dayEnd)
         .reduce((acc, s) => acc + s.duration, 0) / 60
     })
     const max = Math.max(...minutesByDay, 1)

@@ -787,6 +787,33 @@ button, input {
   transform: translateY(-1px);
   box-shadow: 0 6px 18px var(--glow-gold);
 }
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-ghost {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: none;
+  border: 1px solid var(--border-line);
+  color: var(--text-muted);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 13.5px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-ghost:hover {
+  color: var(--text-main);
+  border-color: var(--primary-light);
+}
 
 .task-list {
   list-style: none;
@@ -1145,6 +1172,200 @@ button, input {
 }
 .btn-danger:hover {
   background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
+/* API-backed views: error banner */
+.api-error {
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent);
+  color: var(--danger);
+  font-size: 13px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  margin-bottom: 14px;
+}
+
+/* Journal */
+.journal-textarea {
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--panel-hover);
+  border: 1px solid var(--border-line);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  font-size: 14px;
+  font-family: var(--font-body);
+  outline: none;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+.journal-textarea:focus {
+  border-color: var(--primary);
+}
+.journal-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.journal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.journal-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.journal-entry {
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  transition: background 0.2s;
+}
+.journal-entry:hover {
+  background: var(--panel-hover);
+}
+
+.journal-entry-time {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.journal-entry-text {
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--text-main);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+/* Voice Notes */
+.recorder-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.recorder-stop {
+  background: linear-gradient(135deg, var(--danger), #ff9a72);
+}
+
+.voice-note-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.voice-note-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: var(--panel-hover);
+}
+
+.voice-note-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.voice-note-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.voice-note-time {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.voice-note-audio {
+  width: 100%;
+  height: 34px;
+}
+
+/* Whiteboard */
+.whiteboard-canvas {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 800 / 380;
+  background: var(--panel-hover);
+  border: 1px solid var(--border-line);
+  border-radius: var(--radius-md);
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.whiteboard-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+.whiteboard-actions .task-input {
+  flex: 1;
+  min-width: 160px;
+}
+
+.whiteboard-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.whiteboard-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+  text-align: left;
+}
+.whiteboard-list-item:hover {
+  background: var(--panel-hover);
+}
+
+.whiteboard-list-time {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Stats heatmap */
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(15, 1fr);
+  gap: 5px;
+}
+
+.heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  border: 1px solid var(--border-line);
+}
+
+.session-type.failed {
+  color: var(--danger);
 }
 
 /* ---------- Responsive ---------- */

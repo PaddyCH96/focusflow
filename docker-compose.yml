@@ -27,6 +27,11 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        # The frontend runs entirely in the browser, so this must be a URL
+        # reachable from the host machine, not the backend's in-network
+        # service name — the backend's 8000 is published to the host below.
+        NEXT_PUBLIC_API_URL: http://localhost:8000
     ports:
       - "3001:3000"
     depends_on:

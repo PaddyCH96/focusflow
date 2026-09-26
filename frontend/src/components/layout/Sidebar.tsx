@@ -1,5 +1,5 @@
 "use client"
-import { Timer, ListChecks, Volume2, BarChart3, Palette, Settings, ChevronLeft, ChevronRight } from "lucide-react"
+import { Timer, ListChecks, Volume2, BarChart3, Palette, Settings, ChevronLeft, ChevronRight, BookOpen, Mic, PenTool } from "lucide-react"
 import type { View } from "@/lib/storage/types"
 
 const NAV_ITEMS: { id: View; label: string; icon: React.ReactNode }[] = [
@@ -7,6 +7,9 @@ const NAV_ITEMS: { id: View; label: string; icon: React.ReactNode }[] = [
   { id: "tasks", label: "Tasks", icon: <ListChecks size={18} /> },
   { id: "sounds", label: "Sounds", icon: <Volume2 size={18} /> },
   { id: "stats", label: "Stats", icon: <BarChart3 size={18} /> },
+  { id: "journal", label: "Journal", icon: <BookOpen size={18} /> },
+  { id: "voiceNotes", label: "Voice Notes", icon: <Mic size={18} /> },
+  { id: "whiteboard", label: "Whiteboard", icon: <PenTool size={18} /> },
   { id: "themes", label: "Themes", icon: <Palette size={18} /> },
   { id: "settings", label: "Settings", icon: <Settings size={18} /> },
 ]

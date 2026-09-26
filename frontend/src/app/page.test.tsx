@@ -64,20 +64,23 @@ vi.mock("@/lib/hooks/useTimer", () => ({
 
 vi.mock("@/lib/hooks/useTasks", () => ({
   useTasks: () => ({
-    tasks: [
-      { id: "1", text: "Test task", completed: false, createdAt: new Date().toISOString() },
-    ],
+    tasks: [{ id: 1, text: "Test task", completed: false }],
     addTask: vi.fn(),
     toggleTask: vi.fn(),
     deleteTask: vi.fn(),
+    isLoading: false,
+    error: null,
+    reload: vi.fn(),
   }),
 }))
 
 vi.mock("@/lib/hooks/useSessions", () => ({
   useSessions: () => ({
     sessions: [],
-    addSession: vi.fn(),
-    totalFocusMinutes: 0,
+    logSession: vi.fn(),
+    isLoading: false,
+    error: null,
+    reload: vi.fn(),
   }),
 }))
 
@@ -86,6 +89,39 @@ vi.mock("@/lib/hooks/useDailyGoal", () => ({
     goal: 6,
     cycleGoal: vi.fn(),
   }),
+}))
+
+vi.mock("@/lib/hooks/useJournal", () => ({
+  useJournal: () => ({
+    entries: [],
+    addEntry: vi.fn(),
+    isLoading: false,
+    error: null,
+  }),
+}))
+
+vi.mock("@/lib/hooks/useVoiceNotes", () => ({
+  useVoiceNotes: () => ({
+    notes: [],
+    uploadNote: vi.fn().mockResolvedValue(true),
+    isLoading: false,
+    isUploading: false,
+    error: null,
+  }),
+}))
+
+vi.mock("@/lib/hooks/useWhiteboards", () => ({
+  useWhiteboards: () => ({
+    boards: [],
+    saveBoard: vi.fn().mockResolvedValue(true),
+    isLoading: false,
+    isSaving: false,
+    error: null,
+  }),
+}))
+
+vi.mock("@/lib/migrateLocalData", () => ({
+  migrateLocalDataToBackend: vi.fn().mockResolvedValue(false),
 }))
 
 vi.mock("@/components/Scene3D", () => ({
@@ -104,10 +140,10 @@ describe("FocusFlow Home Page", () => {
     expect(screen.getByRole("button", { name: "Start timer" })).toBeInTheDocument()
   })
 
-  it("renders all six navigation items", async () => {
+  it("renders all nine navigation items", async () => {
     render(<Page />)
     expect(await screen.findByRole("button", { name: "Timer" })).toBeInTheDocument()
-    for (const label of ["Tasks", "Sounds", "Stats", "Themes", "Settings"]) {
+    for (const label of ["Tasks", "Sounds", "Stats", "Journal", "Voice Notes", "Whiteboard", "Themes", "Settings"]) {
       expect(screen.getByRole("button", { name: label })).toBeInTheDocument()
     }
   })
@@ -125,6 +161,24 @@ describe("FocusFlow Home Page", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Tasks" }))
     expect(screen.getByText("Test task")).toBeInTheDocument()
     expect(screen.getByPlaceholderText("Add a task...")).toBeInTheDocument()
+  })
+
+  it("switches to the Journal view", async () => {
+    render(<Page />)
+    fireEvent.click(await screen.findByRole("button", { name: "Journal" }))
+    expect(screen.getByText("Past Entries")).toBeInTheDocument()
+  })
+
+  it("switches to the Voice Notes view", async () => {
+    render(<Page />)
+    fireEvent.click(await screen.findByRole("button", { name: "Voice Notes" }))
+    expect(screen.getByText("Vani — Voice Notes")).toBeInTheDocument()
+  })
+
+  it("switches to the Whiteboard view", async () => {
+    render(<Page />)
+    fireEvent.click(await screen.findByRole("button", { name: "Whiteboard" }))
+    expect(screen.getByText("Mandala — Whiteboard")).toBeInTheDocument()
   })
 
   it("renders the greeting and quote in the top bar", async () => {

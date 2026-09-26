@@ -6,9 +6,11 @@ import type { Task } from "@/lib/storage/types"
 export const TasksView = forwardRef<HTMLInputElement, {
   tasks: Task[]
   onAddTask: (text: string) => void
-  onToggleTask: (id: string) => void
-  onDeleteTask: (id: string) => void
-}>(function TasksView({ tasks, onAddTask, onToggleTask, onDeleteTask }, ref) {
+  onToggleTask: (id: number) => void
+  onDeleteTask: (id: number) => void
+  isLoading?: boolean
+  error?: string | null
+}>(function TasksView({ tasks, onAddTask, onToggleTask, onDeleteTask, isLoading, error }, ref) {
   const [taskInput, setTaskInput] = useState("")
 
   const submit = () => {
@@ -22,6 +24,7 @@ export const TasksView = forwardRef<HTMLInputElement, {
     <div className="view-panel">
       <div className="section-card">
         <h3 className="section-title">Daily Tasks</h3>
+        {error && <p className="api-error">{error}</p>}
         <div className="task-input-row">
           <input
             ref={ref}
@@ -35,7 +38,9 @@ export const TasksView = forwardRef<HTMLInputElement, {
           />
           <button className="btn-primary" onClick={submit}>Add</button>
         </div>
-        {tasks.length === 0 ? (
+        {isLoading ? (
+          <p className="empty-hint">Loading tasks…</p>
+        ) : tasks.length === 0 ? (
           <p className="empty-hint">No tasks yet. Add your first focus task above.</p>
         ) : (
           <ul className="task-list">

@@ -1,10 +1,11 @@
+// A Session always represents a focus (work) attempt — the backend has no
+// concept of breaks. "completed" means the timer ran out; "failed" means the
+// user skipped away from an in-progress focus session.
 export interface Session {
-  id: string
-  startTime: string
+  id: number
   duration: number
-  type: "work" | "shortBreak" | "longBreak"
-  completed: boolean
-  timerType: "pomodoro" | "flowmodoro"
+  status: "completed" | "failed"
+  timestamp: string
 }
 
 export interface TimerState {
@@ -15,10 +16,9 @@ export interface TimerState {
 }
 
 export interface Task {
-  id: string
+  id: number
   text: string
   completed: boolean
-  createdAt: string
 }
 
 export type SoundId = "rain" | "ocean" | "stream" | "wind" | "forest" | "fireplace" | "cafe" | "night"
@@ -33,4 +33,13 @@ export type ThemeId = "sunrise" | "daylight" | "sunset" | "midnight"
 
 export type DayNight = "day" | "night"
 
-export type View = "timer" | "tasks" | "sounds" | "stats" | "themes" | "settings"
+export type View =
+  | "timer"
+  | "tasks"
+  | "sounds"
+  | "stats"
+  | "themes"
+  | "journal"
+  | "voiceNotes"
+  | "whiteboard"
+  | "settings"

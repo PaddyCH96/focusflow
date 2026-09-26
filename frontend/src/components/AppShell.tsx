@@ -7,7 +7,11 @@ import { useTasks } from "@/lib/hooks/useTasks"
 import { useSessions } from "@/lib/hooks/useSessions"
 import { useTimer } from "@/lib/hooks/useTimer"
 import { useDailyGoal } from "@/lib/hooks/useDailyGoal"
+import { useJournal } from "@/lib/hooks/useJournal"
+import { useVoiceNotes } from "@/lib/hooks/useVoiceNotes"
+import { useWhiteboards } from "@/lib/hooks/useWhiteboards"
 import { localStorageProvider } from "@/lib/storage"
+import { migrateLocalDataToBackend } from "@/lib/migrateLocalData"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { TopBar } from "@/components/layout/TopBar"
 import { BottomBar } from "@/components/layout/BottomBar"
@@ -17,6 +21,9 @@ import { TasksView } from "@/components/views/TasksView"
 import { SoundsView } from "@/components/views/SoundsView"
 import { StatsView } from "@/components/views/StatsView"
 import { ThemesView } from "@/components/views/ThemesView"
+import { JournalView } from "@/components/views/JournalView"
+import { VoiceNotesView } from "@/components/views/VoiceNotesView"
+import { WhiteboardView } from "@/components/views/WhiteboardView"
 import { SettingsView } from "@/components/views/SettingsView"
 const Scene3D = dynamic(() => import("@/components/Scene3D").then(m => ({ default: m.Scene3D })), { ssr: false })
 import type { View, TimerState } from "@/lib/storage/types"
@@ -30,6 +37,7 @@ const STORAGE_KEYS = [
   "focusflow_sessions",
   "focusflow_sounds",
   "focusflow_daily_goal",
+  "focusflow_migrated_v1",
 ]
 
 function isToday(iso: string) {
@@ -44,9 +52,12 @@ function nextModeAfter(mode: TimerState["mode"], completedWorkCountAfter: number
 export function AppShell() {
   const { themeId, setTheme, dayNight, toggleDayNight } = useTheme()
   const { sounds, masterVolume, toggle: toggleSound, setVolume, setMasterVolume, stopAll } = useAudio()
-  const { tasks, addTask, toggleTask, deleteTask } = useTasks()
-  const { sessions, addSession } = useSessions()
+  const { tasks, addTask, toggleTask, deleteTask, isLoading: tasksLoading, error: tasksError, reload: reloadTasks } = useTasks()
+  const { sessions, logSession, reload: reloadSessions } = useSessions()
   const { goal, cycleGoal } = useDailyGoal()
+  const journal = useJournal()
+  const voiceNotes = useVoiceNotes()
+  const whiteboards = useWhiteboards()
 
   const [activeView, setActiveView] = useState<View>("timer")
   const [sidebarExpanded, setSidebarExpanded] = useState(true)
@@ -55,8 +66,17 @@ export function AppShell() {
   const taskInputRef = useRef<HTMLInputElement>(null)
   const pendingFocusTasks = useRef(false)
 
-  const todayWorkSessionCount = useMemo(
-    () => sessions.filter(s => s.type === "work" && isToday(s.startTime)).length,
+  useEffect(() => {
+    migrateLocalDataToBackend().then(migrated => {
+      if (migrated) {
+        reloadTasks()
+        reloadSessions()
+      }
+    })
+  }, [reloadTasks, reloadSessions])
+
+  const todayCompletedWorkCount = useMemo(
+    () => sessions.filter(s => s.status === "completed" && isToday(s.timestamp)).length,
     [sessions]
   )
 
@@ -67,15 +87,10 @@ export function AppShell() {
 
   useEffect(() => {
     onSessionCompleteRef.current = () => {
-      addSession({
-        id: crypto.randomUUID(),
-        startTime: new Date().toISOString(),
-        duration: DURATIONS[timer.mode],
-        type: timer.mode,
-        completed: true,
-        timerType: "pomodoro",
-      })
-      const completedAfter = timer.mode === "work" ? todayWorkSessionCount + 1 : todayWorkSessionCount
+      if (timer.mode === "work") {
+        logSession(DURATIONS.work, "completed")
+      }
+      const completedAfter = timer.mode === "work" ? todayCompletedWorkCount + 1 : todayCompletedWorkCount
       setMode(nextModeAfter(timer.mode, completedAfter))
     }
   })
@@ -86,8 +101,11 @@ export function AppShell() {
   }, [timer.remaining, timer.mode])
 
   const handleSkip = useCallback(() => {
-    setMode(nextModeAfter(timer.mode, todayWorkSessionCount))
-  }, [setMode, timer.mode, todayWorkSessionCount])
+    if (timer.mode === "work" && timer.remaining < DURATIONS.work) {
+      logSession(DURATIONS.work - timer.remaining, "failed")
+    }
+    setMode(nextModeAfter(timer.mode, todayCompletedWorkCount))
+  }, [setMode, timer.mode, timer.remaining, todayCompletedWorkCount, logSession])
 
   const handleQuickAdd = useCallback(() => {
     pendingFocusTasks.current = true
@@ -160,6 +178,8 @@ export function AppShell() {
             onAddTask={addTask}
             onToggleTask={toggleTask}
             onDeleteTask={deleteTask}
+            isLoading={tasksLoading}
+            error={tasksError}
           />
         )}
 
@@ -174,6 +194,35 @@ export function AppShell() {
         )}
 
         {activeView === "stats" && <StatsView sessions={sessions} />}
+
+        {activeView === "journal" && (
+          <JournalView
+            entries={journal.entries}
+            onAddEntry={journal.addEntry}
+            isLoading={journal.isLoading}
+            error={journal.error}
+          />
+        )}
+
+        {activeView === "voiceNotes" && (
+          <VoiceNotesView
+            notes={voiceNotes.notes}
+            onUpload={voiceNotes.uploadNote}
+            isLoading={voiceNotes.isLoading}
+            isUploading={voiceNotes.isUploading}
+            error={voiceNotes.error}
+          />
+        )}
+
+        {activeView === "whiteboard" && (
+          <WhiteboardView
+            boards={whiteboards.boards}
+            onSave={whiteboards.saveBoard}
+            isLoading={whiteboards.isLoading}
+            isSaving={whiteboards.isSaving}
+            error={whiteboards.error}
+          />
+        )}
 
         {activeView === "themes" && (
           <ThemesView
