@@ -58,6 +58,17 @@ def update_task(task_id: int, task: TaskUpdate):
         raise HTTPException(status_code=404, detail="Task not found")
     return updated
 
+@router.delete("/tasks/{task_id}", status_code=204)
+def delete_task(task_id: int):
+    conn = get_db()
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute("DELETE FROM tasks WHERE id = %s RETURNING id", (task_id,))
+        deleted = cur.fetchone()
+    conn.close()
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return None
+
 # --- PHASE 2: Sessions (Stats) ---
 @router.get("/sessions", response_model=list[SessionResponse])
 def get_sessions():

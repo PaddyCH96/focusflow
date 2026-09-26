@@ -1,58 +1,104 @@
-import { describe, it, expect, beforeEach } from "vitest"
-import { renderHook, act } from "@testing-library/react"
+import { describe, it, expect, beforeEach, vi } from "vitest"
+import { renderHook, act, waitFor } from "@testing-library/react"
 import { useTasks } from "./useTasks"
 
-const STORAGE_KEY = "focusflow_tasks"
+function jsonResponse(data: unknown, status = 200): Response {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    text: async () => JSON.stringify(data),
+    json: async () => data,
+  } as Response
+}
 
 describe("useTasks", () => {
   beforeEach(() => {
-    localStorage.clear()
+    vi.restoreAllMocks()
   })
 
-  it("starts with empty tasks", () => {
+  it("loads tasks from the API on mount", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse([{ id: 1, title: "Existing task", completed: false }])
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
     const { result } = renderHook(() => useTasks())
-    expect(result.current.tasks).toEqual([])
+    expect(result.current.isLoading).toBe(true)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.tasks).toEqual([{ id: 1, text: "Existing task", completed: false }])
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/tasks"), expect.any(Object))
   })
 
-  it("adds tasks", () => {
+  it("adds a task via POST /tasks", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse([]))
+      .mockResolvedValueOnce(jsonResponse({ id: 5, title: "New task", completed: false }))
+    vi.stubGlobal("fetch", fetchMock)
+
     const { result } = renderHook(() => useTasks())
-    act(() => { result.current.addTask("Test task") })
-    expect(result.current.tasks).toHaveLength(1)
-    expect(result.current.tasks[0].text).toBe("Test task")
-    expect(result.current.tasks[0].completed).toBe(false)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    act(() => {
+      result.current.addTask("New task")
+    })
+    await waitFor(() => expect(result.current.tasks).toHaveLength(1))
+    expect(result.current.tasks[0]).toEqual({ id: 5, text: "New task", completed: false })
   })
 
-  it("persists tasks to localStorage", () => {
-    const { result } = renderHook(() => useTasks())
-    act(() => { result.current.addTask("Persisted task") })
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]")
-    expect(saved).toHaveLength(1)
-    expect(saved[0].text).toBe("Persisted task")
-  })
+  it("optimistically toggles completion and rolls back on failure", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse([{ id: 1, title: "Task", completed: false }]))
+      .mockResolvedValueOnce(jsonResponse({ detail: "server error" }, 500))
+    vi.stubGlobal("fetch", fetchMock)
 
-  it("toggles task completion", () => {
     const { result } = renderHook(() => useTasks())
-    act(() => { result.current.addTask("Toggle me") })
-    const id = result.current.tasks[0].id
-    act(() => { result.current.toggleTask(id) })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    act(() => {
+      result.current.toggleTask(1)
+    })
     expect(result.current.tasks[0].completed).toBe(true)
-    act(() => { result.current.toggleTask(id) })
-    expect(result.current.tasks[0].completed).toBe(false)
+
+    await waitFor(() => expect(result.current.tasks[0].completed).toBe(false))
+    expect(result.current.error).toBeTruthy()
   })
 
-  it("deletes tasks", () => {
+  it("optimistically removes a task via DELETE", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse([{ id: 1, title: "Task", completed: false }]))
+      .mockResolvedValueOnce({ ok: true, status: 204, text: async () => "", json: async () => undefined } as Response)
+    vi.stubGlobal("fetch", fetchMock)
+
     const { result } = renderHook(() => useTasks())
-    act(() => { result.current.addTask("Delete me") })
-    const id = result.current.tasks[0].id
-    act(() => { result.current.deleteTask(id) })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    act(() => {
+      result.current.deleteTask(1)
+    })
     expect(result.current.tasks).toHaveLength(0)
   })
 
-  it("restores tasks from localStorage on mount", () => {
-    const task = { id: "existing-1", text: "Existing task", completed: false, createdAt: new Date().toISOString() }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([task]))
+  it("surfaces a load error instead of throwing", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ detail: "boom" }, 500))
+    vi.stubGlobal("fetch", fetchMock)
+
     const { result } = renderHook(() => useTasks())
-    expect(result.current.tasks).toHaveLength(1)
-    expect(result.current.tasks[0].text).toBe("Existing task")
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.error).toBeTruthy()
+    expect(result.current.tasks).toEqual([])
+  })
+
+  it("reload triggers a fresh GET request", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse([]))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { result } = renderHook(() => useTasks())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    const callsBefore = fetchMock.mock.calls.length
+
+    act(() => {
+      result.current.reload()
+    })
+    await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(callsBefore))
   })
 })

@@ -1,53 +1,87 @@
-import { describe, it, expect, beforeEach } from "vitest"
-import { renderHook, act } from "@testing-library/react"
+import { describe, it, expect, beforeEach, vi } from "vitest"
+import { renderHook, act, waitFor } from "@testing-library/react"
 import { useSessions } from "./useSessions"
-import type { Session } from "../storage/types"
 
-const STORAGE_KEY = "focusflow_sessions"
-
-function makeSession(overrides: Partial<Session> = {}): Session {
+function jsonResponse(data: unknown, status = 200): Response {
   return {
-    id: crypto.randomUUID(),
-    startTime: new Date().toISOString(),
-    duration: 1500,
-    type: "work",
-    completed: true,
-    timerType: "pomodoro",
-    ...overrides,
-  }
+    ok: status >= 200 && status < 300,
+    status,
+    text: async () => JSON.stringify(data),
+    json: async () => data,
+  } as Response
 }
 
 describe("useSessions", () => {
   beforeEach(() => {
-    localStorage.clear()
+    vi.restoreAllMocks()
   })
 
-  it("starts with empty sessions", () => {
+  it("starts empty and loads sessions from the API", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse([{ id: 1, duration: 1500, status: "completed", timestamp: "2024-01-01T00:00:00.000Z" }])
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
     const { result } = renderHook(() => useSessions())
+    expect(result.current.sessions).toEqual([])
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.sessions).toHaveLength(1)
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/sessions"), expect.any(Object))
+  })
+
+  it("logs a completed session and prepends it to the list", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse([]))
+      .mockResolvedValueOnce(jsonResponse({ id: 2, duration: 900, status: "completed", timestamp: "2024-01-02T00:00:00.000Z" }))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { result } = renderHook(() => useSessions())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    act(() => {
+      result.current.logSession(900, "completed")
+    })
+    await waitFor(() => expect(result.current.sessions).toHaveLength(1))
+    expect(result.current.sessions[0].status).toBe("completed")
+  })
+
+  it("logs a failed session when a focus attempt is skipped mid-way", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse([]))
+      .mockResolvedValueOnce(jsonResponse({ id: 3, duration: 200, status: "failed", timestamp: "2024-01-03T00:00:00.000Z" }))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { result } = renderHook(() => useSessions())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    act(() => {
+      result.current.logSession(200, "failed")
+    })
+    await waitFor(() => expect(result.current.sessions).toHaveLength(1))
+    expect(result.current.sessions[0].status).toBe("failed")
+  })
+
+  it("surfaces a load error instead of throwing", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ detail: "boom" }, 500))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { result } = renderHook(() => useSessions())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.error).toBeTruthy()
     expect(result.current.sessions).toEqual([])
   })
 
-  it("adds sessions in reverse chronological order", () => {
-    const { result } = renderHook(() => useSessions())
-    act(() => { result.current.addSession(makeSession({ id: "1" })) })
-    act(() => { result.current.addSession(makeSession({ id: "2" })) })
-    expect(result.current.sessions).toHaveLength(2)
-    expect(result.current.sessions[0].id).toBe("2")
-    expect(result.current.sessions[1].id).toBe("1")
-  })
+  it("reload triggers a fresh GET request", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse([]))
+    vi.stubGlobal("fetch", fetchMock)
 
-  it("computes total focus minutes", () => {
     const { result } = renderHook(() => useSessions())
-    act(() => { result.current.addSession(makeSession({ type: "work", duration: 1500 })) })
-    act(() => { result.current.addSession(makeSession({ type: "work", duration: 600 })) })
-    act(() => { result.current.addSession(makeSession({ type: "shortBreak", duration: 300 })) })
-    expect(result.current.totalFocusMinutes).toBe(2100)
-  })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    const callsBefore = fetchMock.mock.calls.length
 
-  it("persists sessions to localStorage", () => {
-    const { result } = renderHook(() => useSessions())
-    act(() => { result.current.addSession(makeSession()) })
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]")
-    expect(saved).toHaveLength(1)
+    act(() => {
+      result.current.reload()
+    })
+    await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(callsBefore))
   })
 })

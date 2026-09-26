@@ -4,6 +4,8 @@ import { Canvas, useFrame } from "@react-three/fiber"
 import { PerspectiveCamera } from "@react-three/drei"
 import * as THREE from "three"
 import { useTheme } from "./ThemeContext"
+import { darken } from "@/lib/color"
+import { seededRandom } from "@/lib/random"
 
 function fbm(x: number, z: number, octaves = 4): number {
   let value = 0
@@ -101,13 +103,13 @@ function Clouds({ color }: { color: string }) {
   const clouds = useMemo(() => {
     return Array.from({ length: count }, (_, i) => {
       const angle = (i / count) * Math.PI * 2
-      const r = 12 + Math.random() * 8
+      const r = 12 + seededRandom(i * 4 + 1) * 8
       return {
         x: Math.cos(angle) * r,
         z: Math.sin(angle) * r - 8,
-        y: 5 + Math.random() * 4,
-        s: 0.8 + Math.random() * 1.2,
-        speed: 0.02 + Math.random() * 0.03,
+        y: 5 + seededRandom(i * 4 + 2) * 4,
+        s: 0.8 + seededRandom(i * 4 + 3) * 1.2,
+        speed: 0.0015 + seededRandom(i * 4 + 4) * 0.0015,
       }
     })
   }, [])
@@ -139,7 +141,7 @@ function CloudPatch({
   const ref = useRef<THREE.Group>(null!)
   useFrame(() => {
     if (ref.current) {
-      ref.current.position.x += 0.002
+      ref.current.position.x += speed
     }
   })
   const geo = useMemo(() => new THREE.SphereGeometry(1, 6, 6), [])
@@ -174,9 +176,9 @@ function Mist({ color }: { color: string }) {
     const g = new THREE.BufferGeometry()
     const pos = new Float32Array(count * 3)
     for (let i = 0; i < count; i++) {
-      pos[i * 3] = (Math.random() - 0.5) * 50
-      pos[i * 3 + 1] = 1 + Math.random() * 3
-      pos[i * 3 + 2] = (Math.random() - 0.5) * 50 - 5
+      pos[i * 3] = (seededRandom(i * 3 + 1) - 0.5) * 50
+      pos[i * 3 + 1] = 1 + seededRandom(i * 3 + 2) * 3
+      pos[i * 3 + 2] = (seededRandom(i * 3 + 3) - 0.5) * 50 - 5
     }
     g.setAttribute("position", new THREE.BufferAttribute(pos, 3))
     return g
@@ -208,8 +210,8 @@ function Stars() {
     const g = new THREE.BufferGeometry()
     const pos = new Float32Array(count * 3)
     for (let i = 0; i < count; i++) {
-      const theta = Math.random() * Math.PI * 2
-      const phi = Math.acos(2 * Math.random() - 1)
+      const theta = seededRandom(i * 2 + 1) * Math.PI * 2
+      const phi = Math.acos(2 * seededRandom(i * 2 + 2) - 1)
       const r = 80
       pos[i * 3] = r * Math.sin(phi) * Math.cos(theta)
       pos[i * 3 + 1] = Math.abs(r * Math.cos(phi))
@@ -255,26 +257,34 @@ function SkyDome({
 }
 
 export function Scene3D() {
-  const { colors } = useTheme()
+  const { colors, dayNight } = useTheme()
+  const isNight = dayNight === "night"
+
+  const skyTop = isNight ? darken(colors.sceneSkyTop, 0.65) : colors.sceneSkyTop
+  const skyBottom = isNight ? darken(colors.sceneSkyBottom, 0.6) : colors.sceneSkyBottom
+  const cloudColor = isNight ? darken(colors.sceneCloud, 0.55) : colors.sceneCloud
+  const mistColor = isNight ? darken(colors.sceneMist, 0.3) : colors.sceneMist
 
   return (
     <div className="fixed inset-0 -z-10">
       <Canvas>
         <PerspectiveCamera makeDefault position={[0, 4, 12]} fov={55} />
-        <ambientLight intensity={0.4} />
-        <directionalLight position={[5, 10, 5]} intensity={0.6} />
-        <SkyDome
-          topColor={colors.sceneSkyTop}
-          bottomColor={colors.sceneSkyBottom}
+        <ambientLight intensity={isNight ? 0.18 : 0.5} />
+        <directionalLight
+          position={[5, 10, 5]}
+          intensity={isNight ? 0.15 : 0.7}
+          color={isNight ? colors.sceneSun : "#ffffff"}
         />
-        <Stars />
-        <Terrain color={colors.terrainColor} yOffset={-2} />
+        {isNight && <pointLight position={[0, 3, -10]} intensity={0.8} color={colors.sceneSun} distance={20} />}
+        <SkyDome topColor={skyTop} bottomColor={skyBottom} />
+        {isNight && <Stars />}
+        <Terrain color={isNight ? darken(colors.terrainColor, 0.4) : colors.terrainColor} yOffset={-2} />
         <TempleSilhouette x={-6} scale={1} color={colors.stoneDark} />
         <TempleSilhouette x={-3.5} scale={0.7} color={colors.stoneMid} />
         <TempleSilhouette x={5} scale={0.85} color={colors.stoneDark} />
         <TempleSilhouette x={7.5} scale={0.6} color={colors.stoneMid} />
-        <Clouds color={colors.sceneCloud} />
-        <Mist color={colors.sceneMist} />
+        <Clouds color={cloudColor} />
+        <Mist color={mistColor} />
       </Canvas>
     </div>
   )

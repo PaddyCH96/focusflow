@@ -40,7 +40,6 @@ describe("localStorageProvider", () => {
   })
 
   it("handles undefined gracefully in server context", () => {
-    const win = { ...globalThis }
     const descriptor = vi.spyOn(globalThis, "window", "get").mockImplementation(() => undefined as unknown as Window & typeof globalThis)
     const result = localStorageProvider.get("key")
     expect(result).toBeNull()

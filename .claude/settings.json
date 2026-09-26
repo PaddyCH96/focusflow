@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/require-pushed.sh",
+            "timeout": 30,
+            "statusMessage": "Checking all work is pushed"
+          }
+        ]
+      }
+    ]
+  }
+}
