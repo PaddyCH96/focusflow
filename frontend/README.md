@@ -1,4 +1,4 @@
-# FocusFlow Studio
+# Focus Flow
 
 A cinematic, meditation-focused deep work environment inspired by Himalayan monasteries. Combines a Pomodoro timer with procedurally generated 3D landscapes, ambient soundscapes, and Vedic-inspired visual design.
 
@@ -6,17 +6,35 @@ A cinematic, meditation-focused deep work environment inspired by Himalayan mona
 
 ---
 
+## Screenshots
+
+| Timer | Tasks |
+|---|---|
+| ![Timer view](docs/screenshots/desktop-timer.png) | ![Tasks view](docs/screenshots/desktop-tasks.png) |
+
+| Sounds | Themes |
+|---|---|
+| ![Sounds view](docs/screenshots/desktop-sounds.png) | ![Themes view](docs/screenshots/desktop-themes.png) |
+
+| Night mode | Tablet | Mobile |
+|---|---|---|
+| ![Night mode](docs/screenshots/desktop-night-mode.png) | ![Tablet layout](docs/screenshots/tablet-timer.png) | ![Mobile layout](docs/screenshots/mobile-timer.png) |
+
+---
+
 ## Features
 
-- **Pomodoro Timer** — Work/break timer with visual arc progress and tick marks
-- **4 Theme Environments** — Sunrise, Daylight, Sunset, Midnight — each with unique 3D scene colors
+- **Pomodoro Timer** — Focus/Short Break/Long Break with a circular gradient progress ring, start/pause/reset/skip controls, and automatic 4-session long-break cycling
+- **Daily Goal, Today's Focus & Completed Tasks rail** — At-a-glance session progress, a 7-day focus minutes chart, and your task checklist without leaving the timer
+- **4 Theme Environments** — Himalayan Dawn, Sacred Twilight, Vedic Forest, Snow Serenity — each with a distinct accent color and 3D scene palette
+- **Day / Night Mode** — Independent lighting toggle that dims the sky, terrain and mist and brings out the stars
 - **Procedural 3D Scene** — Terrain, temple silhouettes, clouds, mist, and starfield using Three.js
-- **8 Ambient Sounds** — Rain, Ocean, Stream, Wind, Forest, Fireplace, Cafe, Night — synthetically generated via Web Audio API (no audio files needed)
+- **8 Ambient Sounds** — Rain, Ocean, Stream, Wind, Forest, Fireplace, Cafe, Night — synthetically generated via Web Audio API (no audio files needed), with a persistent mini-player in the bottom bar
 - **Task Management** — Add, complete, and delete tasks with localStorage persistence
-- **Session Tracking** — Automatic session logging with insights view
-- **Breathing Guide** — Pranayama-inspired animated mandala
+- **Session Tracking** — Automatic session logging with a dedicated stats view
 - **Fully Offline** — Works completely offline after the initial page load
 - **Local-First** — All data persisted to `localStorage`. No external databases, no cloud sync, no API calls.
+- **Responsive** — Desktop, tablet and mobile layouts, including a collapsible sidebar and an off-canvas mobile nav drawer
 
 ---
 
@@ -31,7 +49,7 @@ A cinematic, meditation-focused deep work environment inspired by Himalayan mona
 | Audio | Web Audio API (procedural synthesis) |
 | Animation | Framer Motion |
 | Icons | Lucide React |
-| Fonts | Inter + Playfair Display (via next/font) |
+| Fonts | Inter (via next/font) |
 | Testing | Vitest + Testing Library |
 | Build | Next.js standalone output |
 
@@ -79,10 +97,12 @@ All state is persisted via `window.localStorage` through a thin abstraction laye
 | Key | Contents |
 |-----|----------|
 | `focusflow_theme` | Current theme ID |
+| `focusflow_day_night` | Day or night lighting mode |
 | `focusflow_timer` | Timer state (remaining, mode, running) |
 | `focusflow_tasks` | Task list |
 | `focusflow_sessions` | Completed sessions |
 | `focusflow_sounds` | Sound state and volumes |
+| `focusflow_daily_goal` | Daily session goal |
 
 ---
 
@@ -127,12 +147,12 @@ docker compose up --build -d
 
 ## Usage
 
-1. **Timer** — Select Focus, Short Break, or Long Break mode. Press Start. The arc fills as time progresses.
-2. **Tasks** — Switch to the Tasks view, type a task, and press Enter or click Add.
-3. **Ambient Sounds** — Switch to Ambient view. Click any sound card to play. Use the slider to adjust individual volume.
-4. **Theme** — Click any of the four colored dots in the top bar (Sunrise, Daylight, Sunset, Midnight).
-5. **Insights** — View today's session count and total focus time.
-6. **Settings** — Click the gear icon to change theme or adjust master volume.
+1. **Timer** — Select Focus, Short Break, or Long Break mode. Press Start. The ring fills as time progresses; use the small icon buttons to reset or skip. Every 4th completed focus session automatically rolls into a Long Break.
+2. **Tasks** — Switch to the Tasks view (or the `+` icon in the top bar), type a task, and press Enter or click Add. Completed tasks also show in the Timer view's "Completed Tasks" card.
+3. **Sounds** — Switch to the Sounds view, click any sound card to play, and use its slider for per-sound volume. The bottom bar always shows a mini player with master volume, shuffle (plays a random sound) and stop-all controls.
+4. **Themes** — Open the Themes view to pick from 4 environments (Himalayan Dawn, Sacred Twilight, Vedic Forest, Snow Serenity) and toggle Day/Night lighting.
+5. **Stats** — View today's session count, total focus time, and recent session history.
+6. **Settings** — Adjust master volume, cycle your daily session goal, or clear all local data.
 
 ---
 
@@ -153,29 +173,42 @@ docker compose up --build -d
 
 ```
 frontend/
+├── docs/screenshots/         # README screenshots
 ├── src/
 │   ├── app/
-│   │   ├── globals.css      # Global styles and Tailwind
+│   │   ├── globals.css       # Design tokens, layout classes, responsive breakpoints
 │   │   ├── layout.tsx        # Root layout with ThemeProvider
-│   │   ├── page.tsx          # Main application page
+│   │   ├── page.tsx          # Client-only loader (next/dynamic, ssr:false) for AppShell
 │   │   └── page.test.tsx     # Page integration tests
 │   ├── components/
-│   │   ├── Scene3D.tsx       # Three.js procedural 3D scene
-│   │   ├── ThemeContext.tsx   # Theme provider with CSS variable injection
-│   │   └── VedicOrnaments.tsx # SVG decorative elements
+│   │   ├── AppShell.tsx      # Composes layout + views; all app state lives here
+│   │   ├── Scene3D.tsx       # Three.js procedural 3D scene (day/night aware)
+│   │   ├── ThemeContext.tsx  # Theme + day/night provider with CSS variable injection
+│   │   ├── layout/
+│   │   │   ├── Sidebar.tsx   # Nav rail (Timer/Tasks/Sounds/Stats/Themes/Settings)
+│   │   │   ├── TopBar.tsx    # Greeting, rotating quote, history/quick-add actions
+│   │   │   └── BottomBar.tsx # Persistent ambient sound mini-player
+│   │   ├── timer/
+│   │   │   └── TimerDial.tsx # Circular gradient progress ring + controls
+│   │   ├── rail/
+│   │   │   └── RightRail.tsx # Daily Goal / Today's Focus / Completed Tasks cards
+│   │   └── views/             # Tasks, Sounds, Stats, Themes, Settings full-page views
 │   └── lib/
 │       ├── constants.ts      # Shared constants (durations)
-│       ├── themes.ts         # Theme color definitions
+│       ├── tokens.ts         # Fixed design tokens (color/radius/space)
+│       ├── themes.ts         # Theme color + scene definitions
+│       ├── color.ts          # Color helpers (night-mode darkening)
 │       ├── audio-engine.ts   # Web Audio API procedural sound engine
 │       ├── storage/
 │       │   ├── types.ts      # TypeScript types for all state
 │       │   ├── provider.ts   # Storage provider interface
 │       │   └── local.ts      # localStorage implementation
 │       └── hooks/
-│           ├── useTimer.ts   # Pomodoro timer logic
-│           ├── useTasks.ts   # Task CRUD operations
-│           ├── useSessions.ts # Session history tracking
-│           └── useAudio.ts   # Sound state management
+│           ├── useTimer.ts     # Pomodoro timer logic
+│           ├── useTasks.ts     # Task CRUD operations
+│           ├── useSessions.ts  # Session history tracking
+│           ├── useAudio.ts     # Sound state management
+│           └── useDailyGoal.ts # Daily session goal
 ├── vitest.config.ts
 └── package.json
 ```
@@ -211,6 +244,9 @@ Procedural synthesis via Web Audio API means zero audio file downloads, zero ser
 
 ### Why single-page architecture?
 The app is a focused productivity tool with a single workflow. A single-page architecture eliminates navigation overhead, simplifies state management, and keeps the bundle small.
+
+### Why is the app shell loaded client-only (`next/dynamic`, `ssr: false`)?
+Every piece of app state (theme, timer, tasks, sessions, sounds, daily goal) is seeded from `localStorage`, which doesn't exist during server rendering. Reading it via a `useState` lazy initializer makes state correct from the first client render, but since `AppShell` is otherwise part of the statically prerendered HTML, that first client render (hydration) would immediately diverge from the empty-state HTML the server sent — producing a React hydration-mismatch error (`#418`) as soon as a real user (who has saved data) loads the page. Loading `AppShell` through `next/dynamic(..., { ssr: false })` in `page.tsx` (the same pattern already used for `Scene3D`, which depends on browser-only WebGL APIs) removes it from server rendering entirely, so there's nothing for the client to mismatch against — the shell mounts once, client-side, already showing the real persisted state. There's no SEO/content-indexing downside here since the app has no public content to crawl.
 
 ---
 

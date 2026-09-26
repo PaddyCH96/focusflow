@@ -1,17 +1,16 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeContext";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const playfair = Playfair_Display({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-playfair",
-  display: "swap",
+  variable: "--font-inter",
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
-  title: "FocusFlow Studio — Himalayan Deep Work Station",
+  title: "FocusFlow — Himalayan Deep Work Station",
   description: "A cinematic, meditation-focused deep work environment inspired by Himalayan monasteries.",
 };
 
@@ -22,7 +21,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full antialiased">
-      <body className={`${inter.variable} ${playfair.variable} min-h-full flex flex-col bg-ambient text-text-main`}>
+      <body className={`${inter.variable} min-h-full flex flex-col bg-bg text-text-main`}>
         <ThemeProvider>
           {children}
         </ThemeProvider>

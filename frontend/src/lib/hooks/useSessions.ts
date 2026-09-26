@@ -6,12 +6,7 @@ import type { Session } from "@/lib/storage/types"
 const SESSIONS_KEY = "focusflow_sessions"
 
 export function useSessions() {
-  const [sessions, setSessions] = useState<Session[]>([])
-
-  useEffect(() => {
-    const saved = localStorageProvider.get<Session[]>(SESSIONS_KEY)
-    if (saved) setSessions(saved)
-  }, [])
+  const [sessions, setSessions] = useState<Session[]>(() => localStorageProvider.get<Session[]>(SESSIONS_KEY) ?? [])
 
   useEffect(() => {
     localStorageProvider.set(SESSIONS_KEY, sessions)

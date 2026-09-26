@@ -1,5 +1,5 @@
 "use client"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { audioEngine } from "@/lib/audio-engine"
 import type { SoundId, SoundState } from "@/lib/storage/types"
 import { localStorageProvider } from "@/lib/storage"
@@ -18,20 +18,11 @@ const defaultSounds: SoundState[] = [
 ]
 
 export function useAudio() {
-  const [sounds, setSounds] = useState<SoundState[]>(defaultSounds)
+  const [sounds, setSounds] = useState<SoundState[]>(() => localStorageProvider.get<SoundState[]>(SOUNDS_KEY) ?? defaultSounds)
   const [masterVolume, setMasterVolume] = useState(0.5)
-  const loaded = useRef(false)
 
   useEffect(() => {
-    const saved = localStorageProvider.get<SoundState[]>(SOUNDS_KEY)
-    if (saved) setSounds(saved)
-    loaded.current = true
-  }, [])
-
-  useEffect(() => {
-    if (loaded.current) {
-      localStorageProvider.set(SOUNDS_KEY, sounds)
-    }
+    localStorageProvider.set(SOUNDS_KEY, sounds)
   }, [sounds])
 
   const toggle = useCallback((id: SoundId) => {

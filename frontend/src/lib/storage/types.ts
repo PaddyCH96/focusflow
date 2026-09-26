@@ -31,4 +31,6 @@ export interface SoundState {
 
 export type ThemeId = "sunrise" | "daylight" | "sunset" | "midnight"
 
-export type View = "focus" | "timer" | "tasks" | "insights" | "breath" | "ambient"
+export type DayNight = "day" | "night"
+
+export type View = "timer" | "tasks" | "sounds" | "stats" | "themes" | "settings"

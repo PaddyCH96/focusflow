@@ -14,13 +14,8 @@ const defaultTimer: TimerState = {
 }
 
 export function useTimer(onSessionComplete?: () => void) {
-  const [timer, setTimer] = useState<TimerState>(defaultTimer)
+  const [timer, setTimer] = useState<TimerState>(() => localStorageProvider.get<TimerState>(TIMER_KEY) ?? defaultTimer)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
-  useEffect(() => {
-    const saved = localStorageProvider.get<TimerState>(TIMER_KEY)
-    if (saved) setTimer(saved)
-  }, [])
 
   useEffect(() => {
     localStorageProvider.set(TIMER_KEY, timer)

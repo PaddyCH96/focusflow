@@ -1,33 +1,29 @@
 import { describe, it, expect, vi } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { render, screen, fireEvent } from "@testing-library/react"
 import React from "react"
 
 vi.mock("@/components/ThemeContext", () => ({
   useTheme: () => ({
-    themeId: "daylight",
+    themeId: "sunrise",
     colors: {
-      ambient: "#0f1920",
-      surface: "#1a2a30",
-      surfaceHover: "#2a3a40",
-      primary: "#8ab8d0",
-      primaryDim: "#6a98b0",
-      secondary: "#708890",
-      textMain: "#d8e8f0",
-      textMuted: "#8898a0",
-      borderLine: "rgba(138, 184, 208, 0.12)",
-      glowGold: "rgba(138, 184, 208, 0.20)",
-      stoneDark: "#141e24",
-      stoneMid: "#202e34",
-      stoneLight: "#303e44",
-      sceneSkyTop: "#1a4a6a",
-      sceneSkyBottom: "#8ab8d0",
-      sceneCloud: "#c0d8e8",
-      sceneSun: "#f0e8c0",
-      sceneAmbient: "#1a2a30",
-      sceneMist: "rgba(180, 210, 230, 0.15)",
-      terrainColor: "#2a3a2a",
+      id: "sunrise",
+      name: "Himalayan Dawn",
+      description: "Golden sunrise, warm tones, peaceful, energizing.",
+      primary: "#F5B15A",
+      primaryLight: "#FFD08A",
+      stoneDark: "#241a10",
+      stoneMid: "#382818",
+      stoneLight: "#4a3820",
+      sceneSkyTop: "#7a3a1a",
+      sceneSkyBottom: "#e8a555",
+      sceneCloud: "#f0c090",
+      sceneSun: "#ffd88a",
+      sceneMist: "rgba(245, 177, 90, 0.15)",
+      terrainColor: "#3a2a18",
     },
     setTheme: vi.fn(),
+    dayNight: "day",
+    toggleDayNight: vi.fn(),
   }),
   ThemeProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
@@ -85,26 +81,54 @@ vi.mock("@/lib/hooks/useSessions", () => ({
   }),
 }))
 
+vi.mock("@/lib/hooks/useDailyGoal", () => ({
+  useDailyGoal: () => ({
+    goal: 6,
+    cycleGoal: vi.fn(),
+  }),
+}))
+
 vi.mock("@/components/Scene3D", () => ({
   Scene3D: () => null,
 }))
 
 import Page from "./page"
 
+// The page is loaded via next/dynamic with ssr:false (see src/app/page.tsx),
+// so content mounts asynchronously — the first query in each test must be a
+// findBy* to await that resolution before asserting on the rendered tree.
 describe("FocusFlow Home Page", () => {
-  it("renders the welcome greeting", () => {
+  it("renders the timer view by default", async () => {
     render(<Page />)
-    expect(screen.getByText("Welcome to FocusFlow")).toBeInTheDocument()
+    expect(await screen.findByText("25:00")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Start timer" })).toBeInTheDocument()
   })
 
-  it("renders timer display", () => {
+  it("renders all six navigation items", async () => {
     render(<Page />)
-    expect(screen.getByText("25:00")).toBeInTheDocument()
+    expect(await screen.findByRole("button", { name: "Timer" })).toBeInTheDocument()
+    for (const label of ["Tasks", "Sounds", "Stats", "Themes", "Settings"]) {
+      expect(screen.getByRole("button", { name: label })).toBeInTheDocument()
+    }
   })
 
-  it("renders navigation items", () => {
+  it("renders the right-rail summary cards", async () => {
     render(<Page />)
-    expect(screen.getAllByText("Focus").length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText("Tasks")).toBeInTheDocument()
+    expect(await screen.findByText("Daily Goal")).toBeInTheDocument()
+    expect(screen.getByText("Today's Focus")).toBeInTheDocument()
+    expect(screen.getByText("Completed Tasks")).toBeInTheDocument()
+    expect(screen.getByText("0 / 6 sessions")).toBeInTheDocument()
+  })
+
+  it("switches to the Tasks view and shows existing tasks", async () => {
+    render(<Page />)
+    fireEvent.click(await screen.findByRole("button", { name: "Tasks" }))
+    expect(screen.getByText("Test task")).toBeInTheDocument()
+    expect(screen.getByPlaceholderText("Add a task...")).toBeInTheDocument()
+  })
+
+  it("renders the greeting and quote in the top bar", async () => {
+    render(<Page />)
+    expect(await screen.findByText("Namaste, Focus Seeker")).toBeInTheDocument()
   })
 })

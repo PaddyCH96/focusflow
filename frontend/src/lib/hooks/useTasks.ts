@@ -6,12 +6,7 @@ import type { Task } from "@/lib/storage/types"
 const TASKS_KEY = "focusflow_tasks"
 
 export function useTasks() {
-  const [tasks, setTasks] = useState<Task[]>([])
-
-  useEffect(() => {
-    const saved = localStorageProvider.get<Task[]>(TASKS_KEY)
-    if (saved) setTasks(saved)
-  }, [])
+  const [tasks, setTasks] = useState<Task[]>(() => localStorageProvider.get<Task[]>(TASKS_KEY) ?? [])
 
   useEffect(() => {
     localStorageProvider.set(TASKS_KEY, tasks)
