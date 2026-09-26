@@ -1,27 +1,32 @@
 # FocusFlow Studio
 
-**Vedic Pomodoro Workstation — open-source, local-first, zero telemetry.**
+**Vedic Pomodoro Workstation — open-source, self-hosted, zero telemetry.**
 
-FocusFlow is a full-stack productivity app that combines Pomodoro and Flowmodoro timers with Pranayama breathing exercises, kanban tasks, journaling, audio tracks, voice notes, and a whiteboard — all wrapped in 5 handcrafted themes.
+FocusFlow is a full-stack productivity app that combines a Pomodoro timer with kanban-style tasks, journaling, voice notes, and a whiteboard — all wrapped in a cinematic Himalayan-monastery visual language with 4 handcrafted environments and day/night lighting.
 
-Built with Next.js, FastAPI, and PostgreSQL, it runs entirely on your machine via Docker.
+Built with Next.js and FastAPI + PostgreSQL, it runs entirely on your machine via Docker. Nothing is sent anywhere except between your own frontend and your own backend.
+
+---
+
+## Screenshots
+
+See [`frontend/README.md`](./frontend/README.md#screenshots) for the full set (Timer, Tasks, Stats, Journal, Voice Notes, Whiteboard, Themes, night mode, and responsive layouts).
 
 ---
 
 ## Features
 
-- **Pomodoro & Flowmodoro** — classic 25/5 or count-up flow mode with proportional breaks
-- **Pranayama Ring** — 4-4-4 breathing guide during breaks
-- **Strict Mode** — `beforeunload` trap that logs failed sessions if you close the tab
-- **5 Themes** — Deep Space, Forest Zen, Cyberpunk, Vintage, Sattva
-- **Kanban Tasks** — add, complete, and track your tasks
-- **Session Analytics** — heatmap with focus scoring
+- **Pomodoro Timer** — Focus / Short Break / Long Break with a circular progress ring; every 4th completed focus session rolls into a Long Break automatically
+- **4 Environments** — Himalayan Dawn, Sacred Twilight, Vedic Forest, Snow Serenity — each with its own accent color and 3D scene palette, plus an independent Day/Night lighting toggle
+- **Kanban-style Tasks** — add, complete, and delete tasks, persisted through the backend
+- **Session Analytics** — a 30-day focus-score heatmap (`/analytics/heatmap`) and session history; skipping mid-focus logs a `failed` session, letting it run out logs `completed`
 - **Journal** — timestamped entries for daily reflection
-- **Audio Player** — lo-fi, rain, forest ambiance (bring your own mp3)
-- **Voice Notes (Vani)** — record and store voice memos
-- **Whiteboard (Mandala)** — freeform drawing canvas
-- **Wisdom Panel** — rotating tips from Bhagavad Gita, Yoga Sutras & Ayurveda
-- **Fully local** — no accounts, no cloud, no telemetry
+- **Voice Notes (Vani)** — record from the browser microphone and play recordings back
+- **Whiteboard (Mandala)** — freeform drawing canvas with save/load
+- **Ambient Sounds** — 8 procedurally-generated soundscapes (Web Audio API, no audio files) — entirely client-side, no backend involved
+- **Fully self-hosted** — no accounts, no third-party cloud services, no telemetry; the only network traffic is your browser talking to the backend you're running
+
+Not yet implemented, despite being an early goal for this project: a Flowmodoro (count-up) timer mode, a Pranayama breathing guide, a "Strict Mode" `beforeunload` failed-session trap, and a dedicated UI for the backend's custom `/audio` track library. The API and data model for most of these are either partially or fully in place; the frontend UI isn't.
 
 ---
 
@@ -29,7 +34,7 @@ Built with Next.js, FastAPI, and PostgreSQL, it runs entirely on your machine vi
 
 | Layer | Stack |
 |-------|-------|
-| Frontend | Next.js 16, React 19, Tailwind CSS 4, Framer Motion |
+| Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS 4, Three.js (@react-three/fiber), Web Audio API |
 | Backend | Python 3.12, FastAPI, Psycopg2 |
 | Database | PostgreSQL 15 |
 | Container | Docker + Docker Compose |
@@ -64,6 +69,10 @@ open http://localhost:3001
 ```
 
 That's it. The backend API runs on `http://localhost:8000` and PostgreSQL on port `5432`.
+
+The frontend runs entirely in your browser and calls the backend directly, so the backend URL is baked into the frontend bundle at build time via `NEXT_PUBLIC_API_URL` (set to `http://localhost:8000` in `docker-compose.yml`). If you publish the backend on a different host or port, change it there and rebuild.
+
+For frontend-only development against a backend you're already running, see [`frontend/README.md`](./frontend/README.md#quick-start).
 
 ### What setup.sh does
 
@@ -100,23 +109,12 @@ pip install -r requirements.txt
 python -m pytest
 ```
 
-State-related endpoints (`/state`) are tested directly. Database-dependent endpoints (`/tasks`, `/sessions`, etc.) are tested with mocked PostgreSQL connections so tests run without Docker.
+Neither suite needs Docker or a running database.
 
-### Tests Conducted (Latest Verification)
+### What's covered
 
-- **Frontend unit/integration tests**: timer rendering + interactions, page/component behavior, and client-side state transitions
-- **Backend API tests**: `/state` read/write flow, request validation, and error handling with mocked DB connections
-- **Regression checks**: history aggregation route behavior, Docker build sanity, and local startup flow
-
-Recommended verification commands:
-
-```bash
-# Frontend
-cd frontend && npx vitest run
-
-# Backend
-cd backend && python -m pytest
-```
+- **Frontend (45 tests)** — timer logic (local-only, verified to make no network calls); task and session hooks against a mocked `fetch` (loading, optimistic add/toggle/delete with rollback on failure, error surfacing, reload); storage provider and theme definitions; page-level integration across all nine views.
+- **Backend (24 tests)** — every endpoint: `/state`, task CRUD including `DELETE` and 404s, sessions (completed and failed), journal, audio tracks, voice note list and multipart upload, whiteboards, the `/history` merge-and-sort, and the `/analytics/heatmap` focus-score math. Database access is mocked through a shared `mock_conn_factory` fixture in `backend/tests/conftest.py`; file writes in the voice-note upload test are mocked too.
 
 ---
 
@@ -131,14 +129,16 @@ focusflow/
 │   │   ├── models.py        # Pydantic request/response models
 │   │   └── router.py        # All API routes
 │   ├── tests/
-│   │   └── test_main.py     # Backend tests
+│   │   ├── conftest.py      # TestClient + mocked-DB fixtures
+│   │   └── test_*.py        # One file per resource
 │   ├── Dockerfile
 │   └── requirements.txt
-├── frontend/
+├── frontend/                # See frontend/README.md for the full tree
 │   ├── src/
-│   │   ├── app/             # Next.js pages
-│   │   └── components/      # React components
-│   ├── tests/               # Vitest test files
+│   │   ├── app/             # Next.js entry, global styles, page tests
+│   │   ├── components/      # AppShell, layout, timer, rail, and views
+│   │   └── lib/             # API client, hooks, storage, themes, audio engine
+│   ├── docs/screenshots/
 │   ├── Dockerfile
 │   └── package.json
 ├── assets/
@@ -159,6 +159,7 @@ focusflow/
 | GET | `/tasks` | List tasks |
 | POST | `/tasks` | Create a task |
 | PUT | `/tasks/{id}` | Toggle task completion |
+| DELETE | `/tasks/{id}` | Delete a task (204; 404 if missing) |
 | GET | `/sessions` | Session history |
 | POST | `/sessions` | Log a session |
 | GET | `/journal` | Journal entries |
@@ -205,6 +206,10 @@ The backend could only connect to a database called `postgres` at host `postgres
 ### 7. No .dockerignore on the frontend
 
 The frontend Docker build was sending the entire project folder (including `node_modules`) to the Docker daemon — over 400MB of unnecessary bloat. I added a `.dockerignore` that excludes `node_modules`, `.next`, and git files.
+
+### 8. The frontend never actually talked to the backend
+
+The backend had a full API for tasks, sessions, journal, voice notes, whiteboards, and analytics — but the frontend kept everything in `localStorage` and never made a single request to it. Journal, Voice Notes, and Whiteboard existed only as database tables with no UI at all. I added a small typed `fetch` client, moved tasks and sessions onto the API (with a one-time migration of anything already in `localStorage`), built the three missing views, surfaced the heatmap in Stats, and added the `DELETE /tasks/{id}` endpoint the existing delete button needed. Backend test coverage went from 3 tests to 24, covering every endpoint.
 
 ---
 
